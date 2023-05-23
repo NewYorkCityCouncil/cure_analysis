@@ -17,7 +17,6 @@ programs_20 <- programs_20[-15,]
 
 programs_20$year <- paste(20,programs_20$year,sep="")
 
-
 prec_pop_cure <- precinct_pop %>% dplyr::select(precinct_2020, p0010001) %>% dplyr::left_join(programs_20, by = c("precinct_2020"="precinct")) %>% dplyr::mutate(cure=ifelse(precinct_2020 %in% programs_20$precinct,"yes", "no")) %>% dplyr::select(precinct_2020, p0010001,council_district,year, month,cure)
 
 # Why did I kick out precinct 22? I don't think 22nd precinct exists
@@ -67,5 +66,5 @@ ggplot(cure_analysis_data %>% filter(precinct%in%programs_20$precinct) %>% left_
   geom_vline(aes(xintercept = as.numeric(year.y)), color = "red") +
   labs(colour="") + facet_wrap(~year.y)
 
-programs_20 %>% group_by(precinct, year) %>% summarize(count=n()) %>% arrange(year)
+#programs_20 %>% group_by(precinct, year) %>% summarize(count=n()) %>% arrange(year)
 ```

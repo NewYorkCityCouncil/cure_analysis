@@ -12,26 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
-library(dplyr)
-library(janitor)
-library(ggplot2)
-#install.packages("ggthemes")
-library(ggthemes)
-#install.packages("stringr")
-library(stringr)
-#install.packages("zoo")
-library(zoo)
-library(tidyr)
-#install.packages("ggseas")
-library(ggseas)
-library(readxl)
-library(sf)
-library(sp)
-library(leaflet)
-library(tibble)
-library(htmltools)
-library(councildown)
-
 # Read in all data used
 # Shootings
 shootings_historical <- read.csv("/Users/nycc/Downloads/NYPD_Shooting_Incident_Data__Historic_-2.csv") %>% clean_names()

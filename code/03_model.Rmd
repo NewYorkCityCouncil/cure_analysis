@@ -12,10 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 ################### Models ######################
-#install.packages("lmerTest")
-library(lmerTest)
 
-###### Models ######
 
 # Run negative binomial with offset using only prcincts with intervention
 mod_4_cure_precincts <- glmer.nb(shootings_count ~ scale(time) + factor(cure) + scale(time_after_int) + scale(arrests_count)  + offset(scale(log(p0010001))) + (1 |precinct), 
