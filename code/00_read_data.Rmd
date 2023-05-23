@@ -1,0 +1,63 @@
+---
+title: "00_read_data"
+author: "Melissa Nunez"
+date: "5/23/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(dplyr)
+library(janitor)
+library(ggplot2)
+#install.packages("ggthemes")
+library(ggthemes)
+#install.packages("stringr")
+library(stringr)
+#install.packages("zoo")
+library(zoo)
+library(tidyr)
+#install.packages("ggseas")
+library(ggseas)
+library(readxl)
+library(sf)
+library(sp)
+library(leaflet)
+library(tibble)
+library(htmltools)
+library(councildown)
+
+# Read in all data used
+# Shootings
+shootings_historical <- read.csv("/Users/nycc/Downloads/NYPD_Shooting_Incident_Data__Historic_-2.csv") %>% clean_names()
+
+shootings_2021 <- read.csv("/Users/nycc/Downloads/NYPD_Shooting_Incident_Data__Year_To_Date_-2.csv") %>% clean_names()
+
+# Separate the date into diff columns
+shootings_historical <- separate(shootings_historical,occur_date,c("month","day","year"),sep="/", remove=FALSE)
+
+# Arrests
+arrests_historical <- read.csv("/Users/nycc/Downloads/NYPD_Arrests_Data__Historic_-4.csv") %>% clean_names()
+
+# Separate the date into diff columns
+arrests_historical <- separate(arrests_historical,arrest_date,c("month","day","year"),sep="/", remove=FALSE)
+
+# Population by precinct
+precinct_pop <- read.csv("/Users/nycc/Downloads/nyc_2010pop_2020precincts.csv") %>% clean_names()
+
+# Program dates
+program_dates <- read_excel("/Users/nycc/Downloads/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
+
+# Seperate and filter program dates
+programs_20 <- program_dates %>% separate(date_text, c("year","month")) %>% filter(year<20) %>% mutate(waves=20-as.numeric(year))
+
+# Precinct shape file
+precinct.shp <- st_read("/Users/nycc/Downloads/Police\ Precincts/geo_export_ece0487d-79ca-4c55-898e-8333b6d2b0bc.shp")
+precinct.shp <- st_transform(precinct.shp,'+proj=longlat +datum=WGS84')
+```
+

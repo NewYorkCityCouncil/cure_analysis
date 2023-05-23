@@ -1,0 +1,44 @@
+---
+title: "01_map_shootings_2021"
+author: "Melissa Nunez"
+date: "5/23/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Join 2021 shootings with precinct pop data and calculate shootings per person
+shootings_map_dat_2021 <- shootings_2021 %>% group_by(precinct) %>% summarize(count=n()) %>% mutate(percent=count/sum(count)) %>% left_join(precinct_pop %>% select(precinct_2020, p0010001), by=c("precinct"="precinct_2020")) %>% mutate(rate=count/p0010001)
+
+# Join shootings per person data with precinct shape file
+shootings_map_dat_2021.shp <- shootings_map_dat_2021 %>% left_join(precinct.shp, by=c("precinct"))
+
+shootings_map_dat_2021.shp <- shootings_map_dat_2021.shp %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+
+# Create color pallete
+pal = colorNumeric(
+  palette = "Greens",
+  domain = shootings_map_dat_2021.shp$rate, 
+  na.color = "Grey", 
+  reverse = FALSE
+)
+
+# Map 2021 shootings per person by precinct and outline (in black) the precincts who had a cure program
+leaflet(shootings_map_dat_2021.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(weight = 1,
+              fillColor = ~pal(rate),
+              color="white",
+              stroke = TRUE,
+              fillOpacity = 1) %>%
+addPolygons(data = shootings_map_dat_2021.shp %>% filter(precinct %in% program_dates$precinct),
+              weight = 1,
+              color="Black",
+              stroke = TRUE,
+              fillOpacity = 0)
+```
+

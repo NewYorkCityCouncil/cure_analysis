@@ -1,0 +1,71 @@
+---
+title: "02_create_cure_analysis_dataset"
+author: "Melissa Nunez"
+date: "5/23/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# There is one precinct (precinct 75) with two cure programs (in different neighborhoods). We keep the intervention that started first (has more follow up data)
+# Remove duplicate with the later start date
+programs_20 <- programs_20[-15,]
+
+programs_20$year <- paste(20,programs_20$year,sep="")
+
+
+prec_pop_cure <- precinct_pop %>% dplyr::select(precinct_2020, p0010001) %>% dplyr::left_join(programs_20, by = c("precinct_2020"="precinct")) %>% dplyr::mutate(cure=ifelse(precinct_2020 %in% programs_20$precinct,"yes", "no")) %>% dplyr::select(precinct_2020, p0010001,council_district,year, month,cure)
+
+# Why did I kick out precinct 22? I don't think 22nd precinct exists
+# Create data frame with precinct and shootings for each year starting in 2006
+shootings_precinct <- data.frame(data.frame(precinct=rep(precinct_pop$precinct_2020, 14)) %>% arrange(precinct),years_since=rep(2006:2019, 7)) %>% filter(precinct!=22) %>% bind_cols(shootings_historical %>% group_by(precinct,year) %>% summarize(shootings_count=n()) %>% ungroup() %>% complete(precinct, year=unique(shootings_historical$year), fill = list(shootings_count = 0)))
+
+# Add precinct population
+cure_full_dataset <- shootings_precinct %>% left_join(prec_pop_cure,by=c("precinct...1"="precinct_2020")) %>% mutate(cure=0)
+
+
+# Make cure variable 1 if intervention has been implemented
+for (i in 1:dim(cure_full_dataset)[1]){
+if(!is.na(cure_full_dataset$year.y[i]) && cure_full_dataset$year.y[i]<=cure_full_dataset$year.x[i]){
+  cure_full_dataset$cure[i]=1
+} else {
+  cure_full_dataset$cure[i]=0
+}
+}
+
+# Initiate time after intervention variable
+cure_full_dataset$time_after_int <- 0
+
+# Make time after intervention variable increase for every year cure has been implemented
+cure_full_dataset <- cure_full_dataset %>% dplyr::group_by(grp = cumsum(cure==0)) %>%
+  dplyr::mutate(time_after_int = ifelse(cure==1, lag(cumsum(cure==1))+1,0)) %>% 
+  ungroup() %>% 
+  dplyr::select(-grp) %>%
+  as.data.frame()
+
+# Create time variable
+cure_full_dataset$time <- rep(1:14,76)
+
+# Take out duplicative variables that occurred during all pof my joining and create shootings per person variable
+cure_analysis_data <- cure_full_dataset %>% dplyr::select(precinct...1,year.x,time,cure,time_after_int, p0010001,shootings_count) %>% dplyr::mutate(shootings_per_person=shootings_count/p0010001)
+
+
+arrests_yearly <- arrests_historical %>% group_by(arrest_precinct,year) %>% summarize(arrests_count=n()) %>% ungroup() %>% complete(arrest_precinct, year=unique(arrests_historical$year), fill = list(arrests_count = 0)) %>% filter(arrest_precinct!=22, arrest_precinct!=27)
+
+cure_analysis_data <- cure_analysis_data %>% bind_cols(arrests_yearly) %>% dplyr::mutate(arrests_per_pop=arrests_count/p0010001) %>% dplyr::mutate(cure=factor(cure))
+
+#data.frame(unique(arrests_historical$arrest_precinct)) %>% anti_join(data.frame(unique(shootings_historical$precinct)), by = c("unique.arrests_historical.arrest_precinct."="unique.shootings_historical.precinct."))
+
+ggplot(cure_analysis_data %>% filter(precinct%in%programs_20$precinct) %>% left_join(programs_20, by="precinct"), aes(x = as.numeric(year.x), y = shootings_count, group=precinct, color=factor(precinct))) +
+  geom_point() +
+  geom_smooth(method="loess", span = 0.4, se=FALSE, aes(colour=factor(precinct))) +
+  theme_bw() +
+  geom_vline(aes(xintercept = as.numeric(year.y)), color = "red") +
+  labs(colour="") + facet_wrap(~year.y)
+
+programs_20 %>% group_by(precinct, year) %>% summarize(count=n()) %>% arrange(year)
+```
