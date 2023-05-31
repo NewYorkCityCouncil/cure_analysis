@@ -6,6 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
   <title>Cure Violence 2016 Precincts - Shootings per 100,000 People</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.5/chartjs-plugin-annotation.js'></script>
   <!--Source of Rounded Chart: https://github.com/jedtrow/Chart.js-Rounded-Bar-Charts-->
   <script type="text/javascript" charset="utf-8" src="Chart.roundedBarCharts.js"></script>
   <script type="text/javascript" charset="utf-8" src="Chart.roundedBarCharts.min.js"></script>
@@ -172,6 +173,27 @@ Chart.defaults.global.title.display = true
             }
         }]
       },
+      annotation: {
+	        events: ["click"],
+	        annotations: [
+	          {
+	            drawTime: "beforeDatasetsDraw",
+	            type: "box",
+	            xScaleID: "x-axis-0",
+	            yScaleID: "y-axis-0",
+	            xMin: "2016",
+	            xMax: "2019",
+	            yMin: 0,
+	            yMax: 90,
+	            backgroundColor: "rgba(230, 230, 230, 0.5)",
+	            borderColor: "rgb(230, 230, 230)",
+	            borderWidth: 1,
+	            onClick: function(e) {
+	              console.log("Box", e.type, this);
+	            }
+	          },
+	        ]
+	      },
       tooltips: {
         callbacks: {
           title: function(tooltipItems, data) {
