@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+source("../code/00_load_dependencies.R")
 ```
 
 
@@ -14,30 +15,33 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 # Read in all data used
 # Shootings
-shootings_historical <- read.csv("/Users/nycc/Downloads/NYPD_Shooting_Incident_Data__Historic_-2.csv") %>% clean_names()
+shootings_historical <-
+ #read.csv("../data/input/NYPD_Shooting_Incident_Data__Historic_-2.csv")
+  fread("https://data.cityofnewyork.us/resource/833y-fsy8.csv?$limit=9999999999999999") %>% clean_names()
 
-shootings_2021 <- read.csv("/Users/nycc/Downloads/NYPD_Shooting_Incident_Data__Year_To_Date_-2.csv") %>% clean_names()
+shootings_2021 <- 
+  #read.csv("../data/input/NYPD_Shooting_Incident_Data__Year_To_Date_-2.csv")
+  fread("https://data.cityofnewyork.us/resource/5ucz-vwe8.json?$limit=99999999") %>% clean_names()
 
 # Separate the date into diff columns
-shootings_historical <- separate(shootings_historical,occur_date,c("month","day","year"),sep="/", remove=FALSE)
+shootings_historical <- separate(shootings_historical,occur_date,c("month","day","year"),sep="-", remove=FALSE)
 
 # Arrests
-arrests_historical <- fread("https://data.cityofnewyork.us/resource/8h9b-rp9u.csv") %>% clean_names()
+arrests_historical <- vroom("https://data.cityofnewyork.us/resource/8h9b-rp9u.csv?$limit=9999999") %>% clean_names()
 
 # Separate the date into diff columns
-arrests_historical <- separate(arrests_historical,arrest_date,c("month","day","year"),sep="/", remove=FALSE)
+arrests_historical <- separate(arrests_historical,arrest_date,c("month","day","year"),sep="-", remove=FALSE)
 
 # Population by precinct
-precinct_pop <- read.csv("/Users/nycc/Downloads/nyc_2010pop_2020precincts.csv") %>% clean_names()
+precinct_pop <- read.csv("../data/input/nyc_2010pop_2020precincts.csv") %>% clean_names()
 
 # Program dates
-program_dates <- read_excel("/Users/nycc/Downloads/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
+program_dates <- read_excel("../data/input/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
 
 # Seperate and filter program dates
 programs_20 <- program_dates %>% separate(date_text, c("year","month")) %>% filter(year<20) %>% mutate(waves=20-as.numeric(year))
 
 # Precinct shape file
-precinct.shp <- st_read("/Users/nycc/Downloads/Police\ Precincts/geo_export_ece0487d-79ca-4c55-898e-8333b6d2b0bc.shp")
-precinct.shp <- st_transform(precinct.shp,'+proj=longlat +datum=WGS84')
+precinct.shp <- st_read(unzip_sf("https://data.cityofnewyork.us/api/geospatial/78dh-3ptz?method=export&format=Shapefile")) %>%  st_transform('+proj=longlat +datum=WGS84')
 ```
 
