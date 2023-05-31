@@ -198,7 +198,7 @@ async function getData() {
   const ys5 = [];
   const ys6 = [];
 
-  const response = await fetch('NYCHA_Vacancies_1-19-2023_vacancy_rate_boro.csv');
+  const response = await fetch('visuals/linechartmulti50/2016_cohort_shootings_per_person_2012-2019.csv');
   const data = await response.text();
 
   const table = data.split('\n').slice(1);
