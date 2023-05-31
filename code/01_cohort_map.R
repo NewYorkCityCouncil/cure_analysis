@@ -68,7 +68,7 @@ m <- leaflet(options = leafletOptions(minZoom = 10, maxZoom = 15,
                       labelOptions = labelOptions(permanent = TRUE,
                                                   noHide = TRUE,
                                                   textOnly = TRUE,
-                                                  textsize = 12,
+                                                  textsize = 10,
                                                   direction = "center",
                                  style = list(color = "#FFFFFF"))) %>%
   addLegendFactor(data = label_shp,
