@@ -43,7 +43,7 @@ source_legend <- HTML('<small> Source: NYC Open Data, Fill in sources </small>')
 # map
 m <- leaflet(options = leafletOptions(minZoom = 10, maxZoom = 15,
                                       zoomControl = FALSE,
-                                      dragging = F)) %>%
+                                      dragging = T)) %>%
   htmlwidgets::onRender("function(el, x) {
         L.control.zoom({ position: 'topright' }).addTo(this)
     }") %>%
