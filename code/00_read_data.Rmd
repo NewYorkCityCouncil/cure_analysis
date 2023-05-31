@@ -22,7 +22,7 @@ shootings_2021 <- read.csv("/Users/nycc/Downloads/NYPD_Shooting_Incident_Data__Y
 shootings_historical <- separate(shootings_historical,occur_date,c("month","day","year"),sep="/", remove=FALSE)
 
 # Arrests
-arrests_historical <- read.csv("/Users/nycc/Downloads/NYPD_Arrests_Data__Historic_-4.csv") %>% clean_names()
+arrests_historical <- fread("https://data.cityofnewyork.us/resource/8h9b-rp9u.csv") %>% clean_names()
 
 # Separate the date into diff columns
 arrests_historical <- separate(arrests_historical,arrest_date,c("month","day","year"),sep="/", remove=FALSE)
