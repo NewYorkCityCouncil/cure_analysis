@@ -21,7 +21,7 @@ shootings_historical <-
 
 shootings_2021 <- 
   #read.csv("../data/input/NYPD_Shooting_Incident_Data__Year_To_Date_-2.csv")
-  fread("https://data.cityofnewyork.us/resource/5ucz-vwe8.json?$limit=99999999") %>% clean_names()
+  fread("https://data.cityofnewyork.us/resource/5ucz-vwe8.csv?$limit=9999999999999") %>% clean_names()
 
 # Separate the date into diff columns
 shootings_historical <- separate(shootings_historical,occur_date,c("month","day","year"),sep="-", remove=FALSE)

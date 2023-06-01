@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# run 00_read_data.Rmd
 ```
 
 
@@ -19,26 +20,43 @@ shootings_map_dat_2021.shp <- shootings_map_dat_2021 %>% left_join(precinct.shp,
 
 shootings_map_dat_2021.shp <- shootings_map_dat_2021.shp %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
 
-# Create color pallete
+# check column distribution
+# plot(density(shootings_map_dat_2021.shp$rate))
+# hist(shootings_map_dat_2021.shp$rate, breaks = 20)
+# large skew, maybe jenks or head/tail classification
+
+int_prct <- classIntervals(shootings_map_dat_2021.shp$rate, 
+                           n = 5, style = 'headtails')
+# Create color palete
 pal = colorNumeric(
-  palette = "Greens",
+  palette = nycc_pal("cool")(5),
   domain = shootings_map_dat_2021.shp$rate, 
-  na.color = "Grey", 
+  na.color = "#E6E6E6", 
   reverse = FALSE
 )
+```
 
+```{r}
 # Map 2021 shootings per person by precinct and outline (in black) the precincts who had a cure program
-leaflet(shootings_map_dat_2021.shp, options = leafletOptions(minZoom = 10), height = 500, width =  500) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(weight = 1,
+m <- leaflet() %>%
+  addPolygons(data = shootings_map_dat_2021.shp,
+              weight = 1,
               fillColor = ~pal(rate),
               color="white",
               stroke = TRUE,
               fillOpacity = 1) %>%
-addPolygons(data = shootings_map_dat_2021.shp %>% filter(precinct %in% program_dates$precinct),
+  addPolygons(data = shootings_map_dat_2021.shp %>% 
+              filter(precinct %in% program_dates$precinct),
               weight = 1,
               color="Black",
               stroke = TRUE,
-              fillOpacity = 0)
+              fillOpacity = 0) %>% 
+  addCouncilStyle() %>% 
+  addLegend_decreasing(position ="topleft",  
+             pal= pal, 
+             values = shootings_map_dat_2021.shp *100000, 
+             title = "Shootings Per 100K", 
+             labFormat = labelFormat(digits = 1), 
+             opacity = 1)
 ```
 

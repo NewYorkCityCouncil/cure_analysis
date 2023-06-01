@@ -23,7 +23,7 @@ no_pop_shp <- cohort_shp %>% filter(is.na(year))
 
 # Create color palete
 pal = colorFactor(
-  palette = nycc_pal("main", reverse = T)(5),
+  palette = nycc_pal("main", reverse = T)(7), # put all 7, even though only 6 bins, or else it will interpolate
   domain = label_shp$year,
   na.color = "#F9F9F9"
 )
@@ -41,7 +41,7 @@ map_labels <- paste0("<h3>Precinct: ", label_shp$precinct,
 source_legend <- HTML('<small> Source: NYC Open Data, Fill in sources </small>')
 
 # map
-m <- leaflet(options = leafletOptions(minZoom = 10, maxZoom = 15,
+m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
                                       zoomControl = FALSE,
                                       dragging = T)) %>%
   htmlwidgets::onRender("function(el, x) {
