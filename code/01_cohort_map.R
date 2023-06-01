@@ -1,4 +1,9 @@
 # run 00_read_data.Rmd
+# read in shootings data
+cure_data <- read.csv("data/output/cure_data.csv") %>%
+  select("precinct", "shootings_count", "shootings_per_person" , "year")
+cure_data$year <- as.character(cure_data$year)
+
 
 # making map on categories of cohorts
 # too many cohorts when grouping by month & year
@@ -16,7 +21,8 @@ cohort_shp <- left_join(precinct.shp,
          lab_lat = st_coordinates(st_centroid(geometry))[,1],
          lab_lon = st_coordinates(st_centroid(geometry))[,2]
          ) %>%  #fixing year & labels for map
-  filter(!grepl("2019", NA)) # remove 2019 precincts but keep NA
+  filter(!grepl("2019", NA)) %>%  # remove 2019 precincts but keep NA
+  left_join(cure_data, by= c('precinct', 'year')) # add pre shooting numbers
 
 label_shp <- cohort_shp %>% filter(!is.na(year))
 # no_pop_shp <- cohort_shp %>% filter(is.na(year)) - no longer needed precinct.shp used to have no missing precincts when subsetting to cohort year in map
@@ -30,8 +36,18 @@ pal = colorFactor(
 )
 
 # Labels when clicking on the map
-map_labels <- paste0("<h3>Precinct: ", label_shp$precinct,
-                    "  |  <em>", label_shp$program_name, "</em></h3>",
+map_labels <- paste0("When entering Cure, there have been about <b>",
+                     round(label_shp$shootings_per_person*100000),
+                    " shootings for every 100K people in ",
+                    label_shp$neighborhood_area_serviced, "</b> (Precinct ",
+                    label_shp$precinct, ")",
+                    "<hr>",
+                    "<br>","<b>Precint: </b>",
+                    label_shp$precinct,
+                    "<br>","<b>Community Organization: </b>",
+                    label_shp$organization,
+                    "<br>","<b>Program Name: </b>",
+                    label_shp$program_name,
                     "<br>","<b>Council District(s): </b>",
                     label_shp$council_district,
                     "<br>","<b>Neighborhood Area Serviced: </b>",
@@ -39,9 +55,9 @@ map_labels <- paste0("<h3>Precinct: ", label_shp$precinct,
                     "<br>","<b>Rounds in Program: </b>",
                    label_shp$waves,
                    "<br>","<b>Year Entering: </b>",
-                   label_shp$year)
-# Source legend
-source_legend <- HTML('<small> Source: NYC Open Data, Fill in sources </small>')
+                   label_shp$year,
+                   "<br>","<b>Number of Shootings: </b>",
+                   label_shp$shootings_count)
 
 # map
 m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
@@ -127,7 +143,6 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
                    position = "topleft",
                    baseGroups = c("All Cure Precincts",
                                   "Cohort 2012", "Cohort 2013","Cohort 2014",
-                                  "Cohort 2015", "Cohort 2016", "Cohort 2019")) %>%
-  addSourceText(source_legend)
+                                  "Cohort 2015", "Cohort 2016", "Cohort 2019"))
 
 saveWidget(m, file = "visuals/cohort_map.html")
