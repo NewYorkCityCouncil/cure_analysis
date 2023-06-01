@@ -19,7 +19,7 @@ cohort_shp <- left_join(precinct.shp,
   filter(!grepl("2019", NA)) # remove 2019 precincts but keep NA
 
 label_shp <- cohort_shp %>% filter(!is.na(year))
-no_pop_shp <- cohort_shp %>% filter(is.na(year))
+# no_pop_shp <- cohort_shp %>% filter(is.na(year)) - no longer needed precinct.shp used to have no missing precincts when subsetting to cohort year in map
 
 # Create color palete
 pal = colorFactor(
@@ -37,7 +37,9 @@ map_labels <- paste0("<h3>Precinct: ", label_shp$precinct,
                     "<br>","<b>Neighborhood Area Serviced: </b>",
                     label_shp$neighborhood_area_serviced,
                     "<br>","<b>Rounds in Program: </b>",
-                   label_shp$waves)
+                   label_shp$waves,
+                   "<br>","<b>Year Entering: </b>",
+                   label_shp$year)
 # Source legend
 source_legend <- HTML('<small> Source: NYC Open Data, Fill in sources </small>')
 
