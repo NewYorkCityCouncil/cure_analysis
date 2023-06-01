@@ -23,9 +23,10 @@ no_pop_shp <- cohort_shp %>% filter(is.na(year))
 
 # Create color palete
 pal = colorFactor(
-  palette = nycc_pal("main", reverse = T)(7), # put all 7, even though only 6 bins, or else it will interpolate
+  palette = c("#666666", "#AF6D46", "#B3B3FF","#1F3A70", "#BA9F64", "#1850B5","#660000"), # nycc_pal interpolates...
   domain = label_shp$year,
-  na.color = "#F9F9F9"
+  na.color = "#F9F9F9",
+  reverse = T
 )
 
 # Labels when clicking on the map
@@ -49,13 +50,55 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
     }") %>%
  # addCouncilStyle() %>% not working
   setMapWidgetStyle(list(background= "white")) %>%
-  addPolygons(data = no_pop_shp,
+  addPolygons(data = precinct.shp,
+              weight = 1,
+              fillColor = "#F9F9F9",
+              fillOpacity = 1,
+              stroke = T,
+              color = "#CACACA") %>%
+  addPolygons(data = label_shp, group = "All Cure Precincts",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
-              color = "#CACACA") %>%
-  addPolygons(data = label_shp,
+              color = "#CACACA",
+              popup = ~lapply(map_labels, HTML)) %>%
+  addPolygons(data = label_shp[label_shp$year=="2012",], group = "Cohort 2012",
+              weight = 1,
+              fillColor = ~pal(year),
+              fillOpacity = 1,
+              stroke = T,
+              color = "#CACACA",
+              popup = ~lapply(map_labels, HTML)) %>%
+  addPolygons(data = label_shp[label_shp$year=="2013",], group = "Cohort 2013",
+              weight = 1,
+              fillColor = ~pal(year),
+              fillOpacity = 1,
+              stroke = T,
+              color = "#CACACA",
+              popup = ~lapply(map_labels, HTML)) %>%
+  addPolygons(data = label_shp[label_shp$year=="2014",], group = "Cohort 2014",
+              weight = 1,
+              fillColor = ~pal(year),
+              fillOpacity = 1,
+              stroke = T,
+              color = "#CACACA",
+              popup = ~lapply(map_labels, HTML)) %>%
+  addPolygons(data = label_shp[label_shp$year=="2015",], group = "Cohort 2015",
+              weight = 1,
+              fillColor = ~pal(year),
+              fillOpacity = 1,
+              stroke = T,
+              color = "#CACACA",
+              popup = ~lapply(map_labels, HTML)) %>%
+  addPolygons(data = label_shp[label_shp$year=="2016",], group = "Cohort 2016",
+              weight = 1,
+              fillColor = ~pal(year),
+              fillOpacity = 1,
+              stroke = T,
+              color = "#CACACA",
+              popup = ~lapply(map_labels, HTML)) %>%
+  addPolygons(data = label_shp[label_shp$year=="2019",], group = "Cohort 2019",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
@@ -71,13 +114,18 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
                                                   textsize = 10,
                                                   direction = "center",
                                  style = list(color = "#FFFFFF"))) %>%
-  addLegendFactor(data = label_shp,
+  addLegendFactor(data = label_shp, position = "topleft",
                   pal= pal,
                   shape = "rect",
                   orientation = "horizontal",
                   values = label_shp$year,
                   title = "Precincts Entering Cure by Cohort Year",
                   opacity = 1) %>%
+  addLayersControl(options = layersControlOptions(collapsed = T),
+                   position = "topleft",
+                   baseGroups = c("All Cure Precincts",
+                                  "Cohort 2012", "Cohort 2013","Cohort 2014",
+                                  "Cohort 2015", "Cohort 2016", "Cohort 2019")) %>%
   addSourceText(source_legend)
 
 saveWidget(m, file = "visuals/cohort_map.html")
