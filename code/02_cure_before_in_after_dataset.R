@@ -10,7 +10,7 @@ cure_data_lags <- cure_data %>%
             (cure != "0" & lead(cure,2) == "1")) %>% #look in front & behind
   filter(year == max(year))
 
-write.csv(cure_data_lags, "cure_before-in-after.csv", row.names = F)
+write.csv(cure_data_lags, "../data/output/cure_before-in-after.csv", row.names = F)
 
 
 ########
