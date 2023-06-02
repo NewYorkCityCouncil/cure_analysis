@@ -13,7 +13,10 @@ cure_data_lags <- cure_data %>%
   group_by(precinct) %>%
   arrange(year, .by_group = TRUE) %>%
   mutate(pct_change = (shootings_per_person/lag(shootings_per_person) - 1) * 100) %>%
-  filter(year != 2010) # remove na
+  filter(year != 2010) %>% # remove na
+  select(!c(shootings_count, shootings_per_person, cure)) %>%
+  pivot_wider(names_from = year,
+              values_from = c(pct_change)) # table format
 
 
 write.csv(cure_data_lags, "data/output/cure_before-in-after.csv", row.names = F)
