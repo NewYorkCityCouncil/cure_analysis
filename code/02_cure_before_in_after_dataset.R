@@ -6,9 +6,13 @@ cure_data$cure<- as.character(cure_data$cure)
 
 cure_data_lags <- cure_data %>%
   group_by(precinct) %>%
-  filter( lag(cure) == "0" & lead(cure) == "1" |
-            (cure != "0" & lead(cure,2) == "1")) %>% #look in front & behind
-  filter(year == max(year))
+  filter(year == max(year)| # get the last year in cure
+           year >= 2010 |# look behind two years from earliest program (2012)
+            (cure != "0" & lead(cure) == "1") ) %>% # entering cure & look ahead
+  group_by(precinct) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(pct_change = (shootings_per_person/lag(shootings_per_person) - 1) * 100)
+
 
 write.csv(cure_data_lags, "../data/output/cure_before-in-after.csv", row.names = F)
 

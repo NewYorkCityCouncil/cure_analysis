@@ -21,4 +21,7 @@ lapply(c(list.of.packages,"councildown"), require, character.only = TRUE)
 # remove created variables for packages
 rm(list.of.packages,new.packages)
 
+# do not use sci notation
+options(scipen = 999)
+
 ## Functions -----------------------------------------------
