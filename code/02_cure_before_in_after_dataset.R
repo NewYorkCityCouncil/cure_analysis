@@ -4,6 +4,7 @@ cure_data <- read.csv("data/output/cure_data.csv") %>%
   select("precinct", "shootings_count", "shootings_per_person" , "year", "cure")
 cure_data$cure<- as.character(cure_data$cure)
 
+# calculate lag percent change
 cure_data_lags <- cure_data %>%
   group_by(precinct) %>%
   filter(year == max(year)| # get the last year in cure
@@ -11,10 +12,11 @@ cure_data_lags <- cure_data %>%
             (cure != "0" & lead(cure) == "1") ) %>% # entering cure & look ahead
   group_by(precinct) %>%
   arrange(year, .by_group = TRUE) %>%
-  mutate(pct_change = (shootings_per_person/lag(shootings_per_person) - 1) * 100)
+  mutate(pct_change = (shootings_per_person/lag(shootings_per_person) - 1) * 100) %>%
+  filter(year != 2010) # remove na
 
 
-write.csv(cure_data_lags, "../data/output/cure_before-in-after.csv", row.names = F)
+write.csv(cure_data_lags, "data/output/cure_before-in-after.csv", row.names = F)
 
 
 ########
