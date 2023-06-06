@@ -13,23 +13,36 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Join 2021 shootings with precinct pop data and calculate shootings per person
-shootings_map_dat_2021 <- shootings_2021 %>% group_by(precinct) %>% summarize(count=n()) %>% mutate(percent=count/sum(count)) %>% left_join(precinct_pop %>% select(precinct_2020, p0010001), by=c("precinct"="precinct_2020")) %>% mutate(rate=count/p0010001)
+shootings_map_dat_2021 <- shootings_2021 %>% 
+  group_by(precinct) %>% 
+  summarize(count=n()) %>% 
+  mutate(percent=count/sum(count)) %>% 
+  left_join(precinct_pop %>% 
+              select(precinct_2020, p0010001), 
+            by=c("precinct"="precinct_2020")) %>% 
+  mutate(rate=count/p0010001)
 
 # Join shootings per person data with precinct shape file
-shootings_map_dat_2021.shp <- shootings_map_dat_2021 %>% left_join(precinct.shp, by=c("precinct"))
+shootings_map_dat_2021.shp <- precinct.shp %>% 
+  left_join(shootings_map_dat_2021, by=c("precinct"))
 
-shootings_map_dat_2021.shp <- shootings_map_dat_2021.shp %>% st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
+shootings_map_dat_2021.shp <- shootings_map_dat_2021.shp %>% 
+  st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
 
+```
+
+```{r}
 # check column distribution
-# plot(density(shootings_map_dat_2021.shp$rate))
-# hist(shootings_map_dat_2021.shp$rate, breaks = 20)
+ plot(density(shootings_map_dat_2021.shp$rate, na.rm = T))
+ hist(shootings_map_dat_2021.shp$rate, breaks = 20)
 # large skew, maybe jenks or head/tail classification
 
 int_prct <- classIntervals(shootings_map_dat_2021.shp$rate, 
                            n = 5, style = 'headtails')
 # Create color palete
-pal = colorNumeric(
-  palette = nycc_pal("cool")(5),
+palPct = colorBin(
+  palette = nycc_pal("cool")(7),
+  bins = int_prct$brks,
   domain = shootings_map_dat_2021.shp$rate, 
   na.color = "#E6E6E6", 
   reverse = FALSE
@@ -39,9 +52,10 @@ pal = colorNumeric(
 ```{r}
 # Map 2021 shootings per person by precinct and outline (in black) the precincts who had a cure program
 m <- leaflet() %>%
+
   addPolygons(data = shootings_map_dat_2021.shp,
               weight = 1,
-              fillColor = ~pal(rate),
+              fillColor = ~palPct(rate),
               color="white",
               stroke = TRUE,
               fillOpacity = 1) %>%
