@@ -49,7 +49,9 @@ shootings_06_12.shp <- shootings_06_12.shp %>%
 
 
 # creating the choropleth  
-m <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>% 
+m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
+                                      zoomControl = FALSE,
+                                      dragging = T)) %>% 
   htmlwidgets::onRender("function(el, x) { 
         L.control.zoom({ position: 'topright' }).addTo(this)
     }") %>% # moving zoom control to the right
@@ -82,4 +84,4 @@ m <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
                                                               "font-weight" = "bold"))) %>%
   leaflet.extras::setMapWidgetStyle(list(background = "white"))# white background
 
-m
+#saveWidget(m, file = "visuals/avg_shootings_map.html")
