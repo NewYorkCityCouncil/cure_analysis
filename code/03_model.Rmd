@@ -36,5 +36,11 @@ summary(glmer.nb(shootings_count ~ scale(time) + factor(cure) + scale(time_after
 
 summary(glmer.nb(shootings_count ~ scale(time) + factor(cure) + scale(time_after_int_recode) + scale(arrests_count)  + offset(scale(log(p0010001))) + (1 |precinct), 
     data = cure_analysis_data_recoded %>% filter(precinct %in% programs_20$precinct)))
+
+# Recide dataset with 2020 time point
+cure_analysis_data_2020_final_recoded <- cure_analysis_data_2020_final %>% mutate(time_after_int_recode=time_after_int-1) %>% mutate(time_after_int_recode=ifelse(time_after_int_recode==-1,0,time_after_int_recode))
+
+summary(glmer.nb(shootings_count ~ scale(time) + factor(cure) + scale(time_after_int_recode) + scale(arrests_count)  + offset(scale(log(p0010001))) + (1 |precinct), 
+    data = cure_analysis_data_2020_final_recoded))
 ```
 
