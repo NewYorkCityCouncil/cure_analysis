@@ -38,7 +38,7 @@ precinct_pop <- read.csv("../data/input/nyc_2010pop_2020precincts.csv") %>% clea
 # Program dates
 program_dates <- read_excel("../data/input/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
 
-# Seperate and filter program dates
+# Separate and filter program dates
 programs_20 <- program_dates %>% separate(date_text, c("year","month")) %>% filter(year<20) %>% mutate(waves=20-as.numeric(year))
 
 # Precinct shape file
