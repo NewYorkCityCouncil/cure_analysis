@@ -56,14 +56,18 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
         L.control.zoom({ position: 'topright' }).addTo(this)
     }") %>% # moving zoom control to the right
   addPolygons(data = shootings_06_12.shp, # adding shootings by precinct
-              weight = ~ ifelse(shootings_06_12.shp$precinct %in% precincts_in_cure, 1.5,1),
+              weight = 1,
               fillColor = ~palPct(shootings_per_100K),
               #color="#cdd9f1",
-              color= ~ ifelse(shootings_06_12.shp$precinct %in% precincts_in_cure, "red","
-                              white"),
+              color= "white",
               stroke = TRUE,
               fillOpacity = 1,
               popup = ~map_labels) %>%
+  addPolylines(data = shootings_06_12.shp %>% filter(precinct %in% precincts_in_cure),
+               color = "black",
+               stroke = TRUE,
+               opacity = 1, 
+               weight = 1) %>%
   addLegend_decreasing(position ="topleft", # adding a legend
                        pal= palPct,
                        values = shootings_06_12.shp$shootings_per_100K,
