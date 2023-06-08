@@ -9,8 +9,8 @@ program_dates <- read_excel("data/output/cure_programs.xlsx")
 precincts_in_cure <- unique(program_dates$Precinct) 
 
 # joining shootings per person data with precinct shape file
-shootings_06_12.shp <- shootings_06_12 %>% 
-  left_join(precinct.shp, by=c("precinct"))
+shootings_06_12.shp <- precinct.shp %>% 
+  left_join(shootings_06_12, by=c("precinct"))
 shootings_06_12.shp <- shootings_06_12.shp %>% 
   st_as_sf() %>% st_transform('+proj=longlat +datum=WGS84')
 
@@ -83,7 +83,7 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
                                                   textOnly = TRUE,
                                                   textsize = 4,
                                                   direction = "center",
-                                                  style = list(color = "#800000",
+                                                  style = list(color = "black",
                                                               "font-family" = 'sans serif',
                                                               "font-weight" = "bold"))) %>%
   leaflet.extras::setMapWidgetStyle(list(background = "white"))# white background
