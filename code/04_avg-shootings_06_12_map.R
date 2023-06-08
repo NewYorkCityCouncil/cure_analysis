@@ -5,8 +5,8 @@ precinct.shp <- st_transform(precinct.shp,'+proj=longlat +datum=WGS84')
 
 
 # just precincts in cure 
-program_dates <- read_excel("data/output/cure_programs.xlsx") 
-precincts_in_cure <- unique(program_dates$Precinct) 
+program_dates <- read.csv("data/output/cure_analysis_data_2020_final.csv") 
+precincts_in_cure <- unique(program_dates$precinct) 
 
 # joining shootings per person data with precinct shape file
 shootings_06_12.shp <- precinct.shp %>% 
