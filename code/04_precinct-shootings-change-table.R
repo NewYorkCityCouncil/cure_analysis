@@ -83,10 +83,10 @@ gt_table <- cure_data %>%
             locations = cells_body(columns = "precinct",
                                    rows = c(2,4,5,11,17)) )  %>%
   tab_style(style = cell_text(color = "#222222",
-                              size = px(12)),
+                              size = px(13),
+                              font = google_font("Open Sans")),
             locations = cells_column_labels())  %>%
-  opt_table_font(font = list(google_font(name = "Open Sans"),
-                             "Georgia", "serif")) %>%
+  opt_table_font(font = list(google_font(name = "Open Sans") )) %>%
   rm_header()
 
 
