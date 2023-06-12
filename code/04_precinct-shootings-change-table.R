@@ -14,12 +14,15 @@ names(cure_data)[2:11] <- seq(2011, 2020, 1)
 ###### gt table ---------
 
 gt_table <- cure_data %>%
-  gt(rowname_col = "precinct", groupname_col = "groupname") %>%
+  gt(rowname_col = "precinct",
+     groupname_col = "groupname") %>%
+
   # gtExtras::gt_plt_sparkline(sparkline) %>%
   tab_header(title = "% Change in Shootings from Year Before Precincts entered Cure Violence Program",
         subtitle = "In Order by Year of Entry") %>%
+  tab_stubhead(label = "Precinct") %>%
   gt_theme_nytimes() %>%
-  sub_missing() %>%
+  sub_missing(missing_text = "") %>%
   data_color(columns = starts_with("20"),
              rows = everything(),
              method = "numeric",
@@ -31,45 +34,59 @@ gt_table <- cure_data %>%
              contrast_algo = "wcag") %>%
   fmt_percent(columns = starts_with("20"),
               decimals = 0, scale_values = F) %>%
-  tab_style(style = cell_borders(color = "#23417D"),
+  tab_style(style = list(cell_text(weight = "bold"),
+                         cell_borders(sides = c("left", "right"),
+                                      style = "double",
+                                      color = "#e6e6e6",
+                                      weight = px(2))),
             locations = cells_body(rows = c(1:2),
-                         columns = as.character(seq(2012, 2019, 1)))) %>%
-  tab_style(style = cell_borders(color = "#23417D"),
+                         columns = "2012")) %>%
+  tab_style(style = list(cell_text(weight = "bold"),
+                         cell_borders(sides = c("left", "right"),
+                                      style = "double",
+                                      color = "#e6e6e6",
+                                      weight = px(2)) ),
             locations = cells_body(rows = c(3:4),
-                         columns = as.character(seq(2013, 2019, 1)))) %>%
-  tab_style(style = cell_borders(color = "#23417D"),
+                                   columns = "2013")) %>%
+  tab_style(style = list(cell_text(weight = "bold"),
+                         cell_borders(sides = c("left", "right"),
+                                      style = "double",
+                                      color = "#e6e6e6",
+                                      weight = px(2))),
             locations = cells_body(rows = c(5),
-                         columns = as.character(seq(2014, 2019, 1)))) %>%
-  tab_style(style = cell_borders(color = "#23417D"),
-            locations = cells_body(rows = c(6:12),
-                        columns = as.character(seq(2015, 2019, 1)))) %>%
-  tab_style(style = cell_borders(color = "#23417D"),
-            locations = cells_body(rows = c(13:18),
-                       columns = as.character(seq(2016, 2019, 1))))  %>%
-  # tab_row_group(label = "2016 Entry", rows = 13:18) %>%
-  #   tab_row_group(label = "2015 Entry", rows = 6:12) %>%
-  #   tab_row_group(label = "2014 Entry", rows = 5) %>%
-  #   tab_row_group(label = "2013 Entry", rows = 3:4) %>%
-  #   tab_row_group(label = "2012 Entry", rows = 1:2) %>%
-  # tab_style(style = cell_text(align = "right"),
-  #           locations = cells_row_groups())
+                                   columns = "2014")) %>%
+  tab_style(style = list(cell_text(weight = "bold"),
+                         cell_borders(sides = c("left", "right"),
+                                      style = "double",
+                                      color = "#e6e6e6",
+                                      weight = px(2)) ),
+            locations = cells_body(rows = c(6:11),
+                                   columns = "2015")) %>%
+  tab_style(style = list(cell_text(weight = "bold"),
+                         cell_borders(sides = c("left", "right"),
+                                      style = "double",
+                                      color = "#e6e6e6",
+                                      weight = px(2)) ),
+            locations = cells_body(rows = c(12:17),
+                                   columns = "2016")) %>%
+  tab_style(style = list(cell_text(weight = "bold"),
+                         cell_borders(sides = c("left", "right"),
+                                      style = "double",
+                                      color = "#e6e6e6",
+                                      weight = px(2)) ),
+            locations = cells_body(rows = c(18:21),
+                                   columns = "2019")) %>%
+  tab_style(style = cell_borders(sides = "bottom",
+                                 style = "double",
+                                 color = "#CACACA",
+                                 weight = px(2)),
+            locations = cells_body(columns = "precinct",
+                                   rows = c(2,4,5,11,17)) )  %>%
+  tab_style(style = cell_text(color = "#222222",
+                              size = px(12)),
+            locations = cells_column_labels())  %>%
+  opt_table_font(font = list(google_font(name = "Open Sans"),
+                             "Georgia", "serif"))
+
 
 gtsave(gt_table, "visuals/precinct-shootings-change-table.html")
-
-
-write.csv(cure_data_lags, "data/output/cure_before-in-after.csv", row.names = F)
-
-# tab_row_group(label = "2016 Entry", rows = 13:18) %>%
-#   tab_row_group(label = "2015 Entry", rows = 6:12) %>%
-#   tab_row_group(label = "2014 Entry", rows = 5) %>%
-#   tab_row_group(label = "2013 Entry", rows = 3:4) %>%
-#   tab_row_group(label = "2012 Entry", rows = 1:2) %>%
-########
-
-cohort_shp <- programs_20 %>%
-  select(1:6, 9:11)) %>%
-  mutate(year = paste0(rep(20,nrow(.)),year),
-         year = case_when(year=="20NA" ~ NA,
-                          TRUE ~ year)) %>%
-  left_join(cure_data, by= c('precinct', 'year')) %>%
-
