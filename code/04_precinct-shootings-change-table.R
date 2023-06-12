@@ -7,7 +7,10 @@ cure_data <- read.csv("data/output/shootings-change-from-start-year_by-precinct.
 # clean column names
 names(cure_data)[2:11] <- seq(2011, 2020, 1)
 
-
+# check values' distribution for color binning-classification
+# c <- unlist(list(cure_data$`2011`,cure_data$`2012`, cure_data$`2013`, cure_data$`2014`, cure_data$`2015`, cure_data$`2016`, cure_data$`2017`, cure_data$`2018`, cure_data$`2019`, cure_data$`2020`))
+# hist(c, breaks = 30)
+# hist(c, breaks = 7)
 ###### gt table ---------
 
 gt_table <- cure_data %>%
@@ -51,7 +54,7 @@ gt_table <- cure_data %>%
   # tab_style(style = cell_text(align = "right"),
   #           locations = cells_row_groups())
 
-
+gtsave(gt_table, "visuals/precinct-shootings-change-table.html")
 
 
 write.csv(cure_data_lags, "data/output/cure_before-in-after.csv", row.names = F)
