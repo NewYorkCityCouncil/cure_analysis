@@ -86,7 +86,8 @@ gt_table <- cure_data %>%
                               size = px(12)),
             locations = cells_column_labels())  %>%
   opt_table_font(font = list(google_font(name = "Open Sans"),
-                             "Georgia", "serif"))
+                             "Georgia", "serif")) %>%
+  rm_header()
 
 
 gtsave(gt_table, "visuals/precinct-shootings-change-table.html")
