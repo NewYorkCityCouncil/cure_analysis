@@ -5,7 +5,7 @@
 #'
 #' IF YOU DO NOT WANT TO INSTALL ANY OF THESE PACKAGES, DO NOT RUN THIS CODE.
 
-list.of.packages <- c("dplyr", "janitor", "ggplot2", "stringr", "tidyr", "zoo", "readxl", "sf", "sp", "leaflet", "tibble", "htmltools", "lmerTest", "data.table", "vroom", "classInt", "htmlwidgets", "leaflet.extras", "leaflegend")
+list.of.packages <- c("dplyr", "janitor", "ggplot2", "stringr", "tidyr", "zoo", "readxl", "sf", "sp", "leaflet", "tibble", "htmltools", "lmerTest", "data.table", "vroom", "classInt", "htmlwidgets", "leaflet.extras", "leaflegend", "gt", "gtExtras")
 
 # checks if packages has been previously installed
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
@@ -26,38 +26,38 @@ options(scipen = 999)
 
 ## Functions -----------------------------------------------
 ##### Decreasing legend for leaflet plot function
-addLegend_decreasing <- function (map, position = c("topright", "bottomright", "bottomleft", 
-                                                    "topleft"), pal, values, na.label = "NA", bins = 7, colors, 
-                                  opacity = 0.5, labels = NULL, labFormat = labelFormat(), 
-                                  title = NULL, className = "info legend", layerId = NULL, 
+addLegend_decreasing <- function (map, position = c("topright", "bottomright", "bottomleft",
+                                                    "topleft"), pal, values, na.label = "NA", bins = 7, colors,
+                                  opacity = 0.5, labels = NULL, labFormat = labelFormat(),
+                                  title = NULL, className = "info legend", layerId = NULL,
                                   group = NULL, data = getMapData(map), decreasing = FALSE) {
   position <- match.arg(position)
   type <- "unknown"
   na.color <- NULL
   extra <- NULL
   if (!missing(pal)) {
-    if (!missing(colors)) 
+    if (!missing(colors))
       stop("You must provide either 'pal' or 'colors' (not both)")
-    if (missing(title) && inherits(values, "formula")) 
+    if (missing(title) && inherits(values, "formula"))
       title <- deparse(values[[2]])
     values <- evalFormula(values, data)
     type <- attr(pal, "colorType", exact = TRUE)
     args <- attr(pal, "colorArgs", exact = TRUE)
     na.color <- args$na.color
-    if (!is.null(na.color) && col2rgb(na.color, alpha = TRUE)[[4]] == 
+    if (!is.null(na.color) && col2rgb(na.color, alpha = TRUE)[[4]] ==
         0) {
       na.color <- NULL
     }
-    if (type != "numeric" && !missing(bins)) 
+    if (type != "numeric" && !missing(bins))
       warning("'bins' is ignored because the palette type is not numeric")
     if (type == "numeric") {
-      cuts <- if (length(bins) == 1) 
+      cuts <- if (length(bins) == 1)
         pretty(values, bins)
-      else bins	
-      
-      if (length(bins) > 2) 
-        if (!all(abs(diff(bins, differences = 2)) <= 
-                 sqrt(.Machine$double.eps))) 
+      else bins
+
+      if (length(bins) > 2)
+        if (!all(abs(diff(bins, differences = 2)) <=
+                 sqrt(.Machine$double.eps)))
           stop("The vector of breaks 'bins' must be equally spaced")
       n <- length(cuts)
       r <- range(values, na.rm = TRUE)
@@ -74,7 +74,7 @@ addLegend_decreasing <- function (map, position = c("topright", "bottomright", "
         labels <- rev(labFormat(type = "numeric", cuts))
       }
       colors <- paste(colors, p, sep = " ", collapse = ", ")
-      
+
     }
     else if (type == "bin") {
       cuts <- args$bins
@@ -87,13 +87,13 @@ addLegend_decreasing <- function (map, position = c("topright", "bottomright", "
         colors <- pal(mids)
         labels <- labFormat(type = "bin", cuts)
       }
-      
+
     }
     else if (type == "quantile") {
       p <- args$probs
       n <- length(p)
       cuts <- quantile(values, probs = p, na.rm = TRUE)
-      mids <- quantile(values, probs = (p[-1] + p[-n])/2, 
+      mids <- quantile(values, probs = (p[-1] + p[-n])/2,
                        na.rm = TRUE)
       if (decreasing == TRUE){
         colors <- pal(rev(mids))
@@ -116,16 +116,16 @@ addLegend_decreasing <- function (map, position = c("topright", "bottomright", "
       }
     }
     else stop("Palette function not supported")
-    if (!any(is.na(values))) 
+    if (!any(is.na(values)))
       na.color <- NULL
   }
   else {
-    if (length(colors) != length(labels)) 
+    if (length(colors) != length(labels))
       stop("'colors' and 'labels' must be of the same length")
   }
-  legend <- list(colors = I(unname(colors)), labels = I(unname(labels)), 
-                 na_color = na.color, na_label = na.label, opacity = opacity, 
-                 position = position, type = type, title = title, extra = extra, 
+  legend <- list(colors = I(unname(colors)), labels = I(unname(labels)),
+                 na_color = na.color, na_label = na.label, opacity = opacity,
+                 position = position, type = type, title = title, extra = extra,
                  layerId = layerId, className = className, group = group)
   invokeMethod(map, data, "addLegend", legend)
 }
