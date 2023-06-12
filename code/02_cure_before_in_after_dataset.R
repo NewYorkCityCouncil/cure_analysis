@@ -1,27 +1,66 @@
 # run 00_read_data.Rmd
-# read in shootings data
-cure_data <- read.csv("data/output/cure_data.csv") %>%
-  select("precinct", "shootings_count", "shootings_per_person" , "year", "cure")
-cure_data$cure<- as.character(cure_data$cure)
+# read in cleaned shootings data -----------
+cure_data <- read.csv("data/output/shootings-change-from-start-year_by-precinct.csv") %>%
+  replace(is.na(.), "")  %>% # remove NAs
+  mutate(across(2:9, as.numeric)) # make all numeric
 
-# calculate lag percent change
-cure_data_lags <- cure_data %>%
-  group_by(precinct) %>%
-  filter(year == max(year)| # get the last year in cure
-           year >= 2010 |# look behind two years from earliest program (2012)
-            (cure != "0" & lead(cure) == "1") ) %>% # entering cure & look ahead
-  group_by(precinct) %>%
-  arrange(year, .by_group = TRUE) %>%
-  mutate(pct_change = (shootings_per_person/lag(shootings_per_person) - 1) * 100) %>%
-  filter(year != 2010) %>% # remove na
-  select(!c(shootings_count, shootings_per_person, cure)) %>%
-  pivot_wider(names_from = year,
-              values_from = c(pct_change)) # table format
+# clean column names
+names(cure_data)[2:11] <- seq(2011, 2020, 1)
+
+
+###### gt table ---------
+
+gt_table <- cure_data %>%
+  gt(rowname_col = "precinct", groupname_col = "groupname") %>%
+  # gtExtras::gt_plt_sparkline(sparkline) %>%
+  tab_header(title = "% Change in Shootings from Year Before Precincts entered Cure Violence Program",
+        subtitle = "In Order by Year of Entry") %>%
+  gt_theme_nytimes() %>%
+  sub_missing() %>%
+  data_color(columns = starts_with("20"),
+             rows = everything(),
+             method = "numeric",
+             colors =
+               scales::col_bin(
+                 bins = c(-100,-50,-10,-1,0,1,20,100,150,350),
+                 na.color = "transparent",
+                 palette = nycc_pal("diverging", reverse = T)(7)),
+             contrast_algo = "wcag") %>%
+  fmt_percent(columns = starts_with("20"),
+              decimals = 0, scale_values = F) %>%
+  tab_style(style = cell_borders(color = "#23417D"),
+            locations = cells_body(rows = c(1:2),
+                         columns = as.character(seq(2012, 2019, 1)))) %>%
+  tab_style(style = cell_borders(color = "#23417D"),
+            locations = cells_body(rows = c(3:4),
+                         columns = as.character(seq(2013, 2019, 1)))) %>%
+  tab_style(style = cell_borders(color = "#23417D"),
+            locations = cells_body(rows = c(5),
+                         columns = as.character(seq(2014, 2019, 1)))) %>%
+  tab_style(style = cell_borders(color = "#23417D"),
+            locations = cells_body(rows = c(6:12),
+                        columns = as.character(seq(2015, 2019, 1)))) %>%
+  tab_style(style = cell_borders(color = "#23417D"),
+            locations = cells_body(rows = c(13:18),
+                       columns = as.character(seq(2016, 2019, 1))))  %>%
+  # tab_row_group(label = "2016 Entry", rows = 13:18) %>%
+  #   tab_row_group(label = "2015 Entry", rows = 6:12) %>%
+  #   tab_row_group(label = "2014 Entry", rows = 5) %>%
+  #   tab_row_group(label = "2013 Entry", rows = 3:4) %>%
+  #   tab_row_group(label = "2012 Entry", rows = 1:2) %>%
+  # tab_style(style = cell_text(align = "right"),
+  #           locations = cells_row_groups())
+
+
 
 
 write.csv(cure_data_lags, "data/output/cure_before-in-after.csv", row.names = F)
 
-
+# tab_row_group(label = "2016 Entry", rows = 13:18) %>%
+#   tab_row_group(label = "2015 Entry", rows = 6:12) %>%
+#   tab_row_group(label = "2014 Entry", rows = 5) %>%
+#   tab_row_group(label = "2013 Entry", rows = 3:4) %>%
+#   tab_row_group(label = "2012 Entry", rows = 1:2) %>%
 ########
 
 cohort_shp <- programs_20 %>%

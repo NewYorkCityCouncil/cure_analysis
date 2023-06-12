@@ -5,7 +5,8 @@
 #'
 #' IF YOU DO NOT WANT TO INSTALL ANY OF THESE PACKAGES, DO NOT RUN THIS CODE.
 
-list.of.packages <- c("dplyr", "janitor", "ggplot2", "stringr", "tidyr", "zoo", "readxl", "sf", "sp", "leaflet", "tibble", "htmltools", "lmerTest", "data.table", "vroom", "classInt", "htmlwidgets", "leaflet.extras", "leaflegend", "gt", "gtExtras")
+list.of.packages <- c("dplyr", "janitor", "ggplot2", "stringr", "tidyr", "zoo", "readxl", "sf", "sp", "leaflet", "tibble", "htmltools", "lmerTest", "data.table", "vroom", "classInt", "htmlwidgets", "leaflet.extras", "leaflegend", "gt", "gtExtras",
+                      "scales")
 
 # checks if packages has been previously installed
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
