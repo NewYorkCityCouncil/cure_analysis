@@ -6,6 +6,8 @@ In the wake of a rebound in shootings and homicides since the Covid-19 pandemic,
 
 Cure Violence takes an evidence-based, public health approach to gun violence by attempting to detect and interrupt conflicts before they escalate, identify and treat high risk individuals (those most likely to commit gun violence and/or become victims of a shooting), and change social norms. According to the NYC DOH “this differs from a criminal justice approach, which does not address how inequity and structural racism can diminish these factors and lead to gun violence in a community.”
 
+While researchers have evaluated the success of Cure Violence in individual NYC precincts, there has not yet been an city-wide analysis of the program’s impact across all affected precincts. The Data Team hoped to fill this gap by conducting our own analysis of Cure Violence across New York City.
+
 ### Goal
 The Council’s Data Team presents a comprehensive in-house statistical analysis of the Cure Violence program which analyzes impacts across all involved precincts. Methodology and data are presented, with the results suggesting that the program is effective at reducing shootings in New York City.
 
