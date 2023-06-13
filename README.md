@@ -28,4 +28,14 @@ Our measure of interest is variation in the number of shootings in each precinct
 There are two parameters of interest: the level and the trend impact of Cure. The level parameter, i.e. immediate impact, refers to the change in shootings immediately and consistently present since the first year that the program was introduced into the precinct. The trend impact estimates any time-varying rate of change in shootings since introduction to the program, i.e. a strengthening or weakening of the impact of the intervention over time.
 
 ### Results
+After adjusting for precinct populations and number of arrests, we see a statistically significant non-time dependent impact. We find that the expected impact of introducing Cure to a precinct is a 16.64% decrease in shootings, and we have confidence that this is not a random fluctuation, but actually due to the intervention. For the trend impact, we see a 5% additional yearly decrease in shootings, but this decrease is not statistically significant, and therefore we don’t have confidence in attributing this additional effect to the Cure program.
 
+### Limitations
+It is important to note that we only adjusted for yearly arrests per precinct and precinct populations but were not able to take into account any other possible confounding variables. There were no interaction terms explored, nor a lag time to allow the intervention to take effect. Because of the impact of Covid-19 on crime levels, we extrapolated any data points after March 15th, 2020.
+
+### Future Work
+The Council's data team hopes to further expand on this analysis to better understand the impact of the Cure violence program, and possibly other neighborhood investments, on crime rates. We are interested in exploring:
+
+- The introduction of a lag time into the model
+- Neighborhood level effects
+- Accounting for covid-related effects for post 2020 data
