@@ -16,6 +16,11 @@ The Council’s Data Team presents a comprehensive in-house statistical analysis
 - [NYPD Arrests Data (Historic)](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrests-Data-Historic-/8h9b-rp9u)
 - [NYC Precinct Population Data](https://johnkeefe.net/nyc-police-precinct-and-census-data)
 
+### Precincts of Interest
+Between 2012 and 2019 the Cure Violence model was implemented in 21 precincts. From exploratory data analysis we deduce that precincts introduced to the Cure program have higher shooting rates.
+
+![](visuals/cohort_map.html)
+
 ### Methods
 #### Structure and Model
 We model the impact of Cure through the use of a linear model. Precincts entered the Cure Violence program at different points in time from 2012 and 2019, which produces a time-varying introductory process known as a step-wedge design.
