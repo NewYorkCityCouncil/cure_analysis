@@ -1,7 +1,7 @@
 # Cure Violence Program in NYC
 ## Neighborhood Investments and Public Safety
 
-An associated webpage for tyhis analysis can be found here
+An associated webpage for this analysis can be found here
 
 ### Backgroud
 In the wake of a rebound in shootings and homicides since the Covid-19 pandemic, as well as high profile cases of gun violence across the country, violent crime has become a top concern for many New Yorkers. Overall, New York City has a lower violent crime rate than most other large American cities—a rate that is near historic lows, with shootings and homicides down 23.2% and 11.4% respectively from last year. However, violent crime remains an ongoing issue in several hotspots around the city.
