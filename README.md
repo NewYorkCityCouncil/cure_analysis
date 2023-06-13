@@ -36,6 +36,6 @@ It is important to note that we only adjusted for yearly arrests per precinct an
 ### Future Work
 The Council's data team hopes to further expand on this analysis to better understand the impact of the Cure violence program, and possibly other neighborhood investments, on crime rates. We are interested in exploring:
 
-- The introduction of a lag time into the model
+- The introduction of a lag into the model
 - Neighborhood level effects
 - Accounting for covid-related effects for post 2020 data
