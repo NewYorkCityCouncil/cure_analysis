@@ -10,9 +10,9 @@ Cure Violence takes an evidence-based, public health approach to gun violence by
 The Council’s Data Team presents a comprehensive in-house statistical analysis of the Cure Violence program which analyzes impacts across all involved precincts. Methodology and data are presented, with the results suggesting that the program is effective at reducing shootings in New York City.
 
 ### Data
-- ['NYPD Shooting Incident Data (Historic)'](https://data.cityofnewyork.us/Public-Safety/NYPD-Shooting-Incident-Data-Historic-/833y-fsy8)
-- ['NYPD Arrests Data (Historic)'](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrests-Data-Historic-/8h9b-rp9u)
-- ['NYC Precinct Population Data'](https://johnkeefe.net/nyc-police-precinct-and-census-data)
+- [NYPD Shooting Incident Data (Historic)](https://data.cityofnewyork.us/Public-Safety/NYPD-Shooting-Incident-Data-Historic-/833y-fsy8)
+- [NYPD Arrests Data (Historic)](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrests-Data-Historic-/8h9b-rp9u)
+- [NYC Precinct Population Data](https://johnkeefe.net/nyc-police-precinct-and-census-data)
 
 ### Methods
 #### Structure and Model
