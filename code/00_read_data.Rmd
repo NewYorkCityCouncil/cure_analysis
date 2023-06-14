@@ -43,5 +43,9 @@ programs_20 <- program_dates %>% separate(date_text, c("year","month")) %>% filt
 
 # Precinct shape file
 precinct.shp <- st_read(unzip_sf("https://data.cityofnewyork.us/api/geospatial/78dh-3ptz?method=export&format=Shapefile")) %>%  st_transform('+proj=longlat +datum=WGS84')
+
+boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/tqmj-j8zm?method=export&format=GeoJSON") %>% 
+  st_transform("+proj=longlat +datum=WGS84") %>% 
+  st_simplify(dTolerance = .00001)
 ```
 
