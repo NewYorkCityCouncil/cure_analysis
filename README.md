@@ -1,9 +1,9 @@
 # Cure Violence Program in NYC
 ## Neighborhood Investments and Public Safety
 
-An associated webpage for this analysis can be found here
+An associated webpage for this analysis can be found here https://council.nyc.gov/data/cure/.
 
-### Backgroud
+### Background
 In the wake of a rebound in shootings and homicides since the Covid-19 pandemic, as well as high profile cases of gun violence across the country, violent crime has become a top concern for many New Yorkers. Overall, New York City has a lower violent crime rate than most other large American cities—a rate that is near historic lows, with shootings and homicides down 23.2% and 11.4% respectively from last year. However, violent crime remains an ongoing issue in several hotspots around the city.
 
 Cure Violence takes an evidence-based, public health approach to gun violence by attempting to detect and interrupt conflicts before they escalate, identify and treat high risk individuals (those most likely to commit gun violence and/or become victims of a shooting), and change social norms. According to the NYC DOH “this differs from a criminal justice approach, which does not address how inequity and structural racism can diminish these factors and lead to gun violence in a community.”
@@ -11,7 +11,7 @@ Cure Violence takes an evidence-based, public health approach to gun violence by
 While researchers have evaluated the success of Cure Violence in individual NYC precincts, there has not yet been an city-wide analysis of the program’s impact across all affected precincts. The Data Team hoped to fill this gap by conducting our own analysis of Cure Violence across New York City.
 
 ### Goal
-The Council’s Data Team presents a comprehensive in-house statistical analysis of the Cure Violence program which analyzes impacts across all involved precincts. Methodology and data are presented, with the results suggesting that the program is effective at reducing shootings in New York City.
+The Council’s Data Team presents an in-house statistical analysis of the Cure Violence program which analyzes impacts across all involved precincts. Methodology and data are presented, with the results suggesting that the program is effective at reducing shootings in New York City.
 
 ### Data
 - [NYPD Shooting Incident Data (Historic)](https://data.cityofnewyork.us/Public-Safety/NYPD-Shooting-Incident-Data-Historic-/833y-fsy8)
@@ -41,3 +41,5 @@ The Council's data team hopes to further expand on this analysis to better under
 - The introduction of a lag into the model
 - Neighborhood level effects
 - Accounting for covid-related effects for post 2020 data
+
+### Scripts
