@@ -16,7 +16,6 @@ names(cure_data)[2:11] <- seq(2011, 2020, 1)
 gt_table <- cure_data %>%
   gt(rowname_col = "precinct",
      groupname_col = "groupname") %>%
-
   # gtExtras::gt_plt_sparkline(sparkline) %>%
   tab_header(title = "% Change in Shootings from Year Before Precincts entered Cure Violence Program",
         subtitle = "In Order by Year of Entry") %>%
