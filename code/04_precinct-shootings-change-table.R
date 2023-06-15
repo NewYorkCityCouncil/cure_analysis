@@ -1,6 +1,6 @@
 # run 00_read_data.Rmd
 # read in cleaned shootings data -----------
-cure_data <- read.csv("data/output/shootings-change-from-start-year_by-precinct.csv") %>%
+cure_data <- read.csv("data/output/shootings-change-from-start-year_by-precinct_2011_2020.csv") %>%
   replace(is.na(.), "")  %>% # remove NAs
   mutate(across(2:9, as.numeric)) # make all numeric
 
@@ -34,46 +34,76 @@ gt_table <- cure_data %>%
              contrast_algo = "wcag") %>%
   fmt_percent(columns = starts_with("20"),
               decimals = 0, scale_values = F) %>%
-  tab_style(style = list(cell_text(weight = "bold"),
-                         cell_borders(sides = c("left", "right"),
+  tab_style(style = cell_borders(sides = c("top"),
+                                 style = "double",
+                                 color = "#e6e6e6",
+                                 weight = px(4)),
+            locations = cells_body(rows = c(1),
+                                   columns = c("2012")) ) %>%
+  tab_style(style = cell_borders(sides = c("top"),
+                                 style = "double",
+                                 color = "#e6e6e6",
+                                 weight = px(4)),
+            locations = cells_body(rows = c(3),
+                                   columns = c("2013")) ) %>%
+  tab_style(style = cell_borders(sides = c("top"),
+                                 style = "double",
+                                 color = "#e6e6e6",
+                                 weight = px(4)),
+            locations = cells_body(rows = c(5),
+                                   columns = c("2014")) ) %>%
+  tab_style(style = cell_borders(sides = c("top"),
+                                 style = "double",
+                                 color = "#e6e6e6",
+                                 weight = px(4)),
+            locations = cells_body(rows = c(6),
+                                   columns = c("2015")) ) %>%
+  tab_style(style = cell_borders(sides = c("top"),
+                                 style = "double",
+                                 color = "#e6e6e6",
+                                 weight = px(4)),
+            locations = cells_body(rows = c(12),
+                                   columns = c("2016")) ) %>%
+  tab_style(style = cell_borders(sides = c("top"),
+                                 style = "double",
+                                 color = "#e6e6e6",
+                                 weight = px(4)),
+            locations = cells_body(rows = c(18),
+                                   columns = c("2017","2018","2019")) ) %>%
+  tab_style(style = cell_borders(sides = c("right"),
                                       style = "double",
                                       color = "#e6e6e6",
-                                      weight = px(2))),
+                                      weight = px(4)),
             locations = cells_body(rows = c(1:2),
                          columns = "2012")) %>%
-  tab_style(style = list(cell_text(weight = "bold"),
-                         cell_borders(sides = c("left", "right"),
+  tab_style(style = cell_borders(sides = c("right"),
                                       style = "double",
                                       color = "#e6e6e6",
-                                      weight = px(2)) ),
+                                      weight = px(4)),
             locations = cells_body(rows = c(3:4),
                                    columns = "2013")) %>%
-  tab_style(style = list(cell_text(weight = "bold"),
-                         cell_borders(sides = c("left", "right"),
+  tab_style(style = cell_borders(sides = c("right"),
                                       style = "double",
                                       color = "#e6e6e6",
-                                      weight = px(2))),
+                                      weight = px(4)),
             locations = cells_body(rows = c(5),
                                    columns = "2014")) %>%
-  tab_style(style = list(cell_text(weight = "bold"),
-                         cell_borders(sides = c("left", "right"),
+  tab_style(style = cell_borders(sides = c("right"),
                                       style = "double",
                                       color = "#e6e6e6",
-                                      weight = px(2)) ),
+                                      weight = px(4)),
             locations = cells_body(rows = c(6:11),
                                    columns = "2015")) %>%
-  tab_style(style = list(cell_text(weight = "bold"),
-                         cell_borders(sides = c("left", "right"),
+  tab_style(style = cell_borders(sides = c("right"),
                                       style = "double",
                                       color = "#e6e6e6",
-                                      weight = px(2)) ),
+                                      weight = px(4)),
             locations = cells_body(rows = c(12:17),
                                    columns = "2016")) %>%
-  tab_style(style = list(cell_text(weight = "bold"),
-                         cell_borders(sides = c("left", "right"),
+  tab_style(style = cell_borders(sides = c("right"),
                                       style = "double",
                                       color = "#e6e6e6",
-                                      weight = px(2)) ),
+                                      weight = px(4)),
             locations = cells_body(rows = c(18:21),
                                    columns = "2019")) %>%
   tab_style(style = cell_borders(sides = "bottom",
