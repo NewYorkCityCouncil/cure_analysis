@@ -1,7 +1,15 @@
+## Make precinct start year cohort map  ###################
+##
+##
+##
+
+rmarkdown::render(input = "../code/00_read_data.Rmd")
+
 # run 00_read_data.Rmd
-# read in shootings data
-cure_data <- read.csv("data/output/cure_data.csv") %>%
-  select("precinct", "shootings_count", "shootings_per_person" , "year")
+# read in shootings cohort data
+cure_data <- read.csv("data/output/cure_analysis_data_2020_final_cure_cohort.csv") %>%
+  select("precinct", "shootings_count", "shootings_per_person" , "year.x")
+names(cure_data)[4]<-"year"
 cure_data$year <- as.character(cure_data$year)
 
 
@@ -10,22 +18,23 @@ cure_data$year <- as.character(cure_data$year)
 length(unique(program_dates$date_text))
 unique(programs_20$year)
 
-# join to precinct
+names(programs_20)[c(1:6, 9:11)]
+
+# join to precinct shapefile
 
 cohort_shp <- left_join(precinct.shp,
                         programs_20 %>%
-                          select(1:6, 9:11)) %>%
-  mutate(year = paste0(rep(20,nrow(.)),year),
+                          select(1:6, 9:11)) %>% # keep columns of interest
+  mutate(year = paste0(rep(20,nrow(.)),year), # clean year text
          year = case_when(year=="20NA" ~ NA,
                           TRUE ~ year),
          lab_lat = st_coordinates(st_centroid(geometry))[,1],
-         lab_lon = st_coordinates(st_centroid(geometry))[,2]
+         lab_lon = st_coordinates(st_centroid(geometry))[,2] # get precinct centriod for labeling map
          ) %>%  #fixing year & labels for map
-  filter(!grepl("2019", NA)) %>%  # remove 2019 precincts but keep NA
+  #filter(!grepl("2019", NA)) %>%  # remove 2019 precincts but keep NA
   left_join(cure_data, by= c('precinct', 'year')) # add pre shooting numbers
 
 label_shp <- cohort_shp %>% filter(!is.na(year))
-# no_pop_shp <- cohort_shp %>% filter(is.na(year)) - no longer needed precinct.shp used to have no missing precincts when subsetting to cohort year in map
 
 # Create color palete
 pal = colorFactor(
@@ -35,29 +44,32 @@ pal = colorFactor(
   reverse = T
 )
 
-# Labels when clicking on the map
-map_labels <- paste0("When entering Cure, there have been about <b>",
-                     round(label_shp$shootings_per_person*100000),
-                    " shootings</b> for every 100K people in <b>",
-                    label_shp$neighborhood_area_serviced, "</b> (Precinct ",
-                    label_shp$precinct, ")",
-                    "<hr>",
-                    "<br>","<b>Precint: </b>",
-                    label_shp$precinct,
-                    "<br>","<b>Community Organization: </b>",
-                    label_shp$organization,
-                    "<br>","<b>Program Name: </b>",
-                    label_shp$program_name,
-                    "<br>","<b>Council District(s): </b>",
-                    label_shp$council_district,
-                    "<br>","<b>Neighborhood Area Serviced: </b>",
-                    label_shp$neighborhood_area_serviced,
-                    "<br>","<b>Rounds in Program: </b>",
-                   label_shp$waves,
-                   "<br>","<b>Year Entering: </b>",
-                   label_shp$year,
-                   "<br>","<b>Number of Shootings: </b>",
-                   label_shp$shootings_count)
+# Labels when clicking on the map, use quote to modify dataframe when switching between start years, evaluate the labels in leaflet
+map_labels <- quote(
+  paste0("When entering Cure, there have been about <b>",
+       round(label_shp$shootings_per_person*100000),
+       " shootings</b> for every 100K people in <b>",
+       label_shp$neighborhood_area_serviced, "</b> (Precinct ",
+       label_shp$precinct, ")",
+       "<hr>",
+       "<br>","<b>Precint: </b>",
+       label_shp$precinct,
+       "<br>","<b>Community Organization: </b>",
+       label_shp$organization,
+       "<br>","<b>Program Name: </b>",
+       label_shp$program_name,
+       "<br>","<b>Council District(s): </b>",
+       label_shp$council_district,
+       "<br>","<b>Neighborhood Area Serviced: </b>",
+       label_shp$neighborhood_area_serviced,
+       "<br>","<b>Rounds in Program: </b>",
+       label_shp$waves,
+       "<br>","<b>Year Entering: </b>",
+       label_shp$year,
+       "<br>","<b>Number of Shootings: </b>",
+       label_shp$shootings_count))
+
+label_shp[label_shp$year=="2019",]
 
 # map
 m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
@@ -80,55 +92,79 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
-  addPolygons(data = label_shp[label_shp$year=="2012",],
+              popup = ~lapply(eval(map_labels), HTML)) %>%
+  addPolygons(data = subset(label_shp, year == "2012"),
               group = "2012",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
-  addPolygons(data = label_shp[label_shp$year=="2013",],
+              popup = ~lapply(eval(str2expression(
+                gsub("label_shp",
+                     "label_shp[label_shp$year=='2012',]",
+                     getTerms(map_labels)))),
+                              HTML)) %>%
+  addPolygons(data =  subset(label_shp, year == "2013"),
               group = "2013",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
-  addPolygons(data = label_shp[label_shp$year=="2014",],
+              popup = ~lapply(eval(str2expression(
+                gsub("label_shp",
+                     "label_shp[label_shp$year=='2013',]",
+                     getTerms(map_labels)))),
+                HTML)) %>%
+  addPolygons(data =  subset(label_shp, year == "2014"),
               group = "2014",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
-  addPolygons(data = label_shp[label_shp$year=="2015",],
+              popup = ~lapply(eval(str2expression(
+                gsub("label_shp",
+                     "label_shp[label_shp$year=='2014',]",
+                     getTerms(map_labels)))),
+                HTML)) %>%
+  addPolygons(data =  subset(label_shp, year == "2015"),
               group = "2015",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
-  addPolygons(data = label_shp[label_shp$year=="2016",],
+              popup = ~lapply(eval(str2expression(
+                gsub("label_shp",
+                     "label_shp[label_shp$year=='2015',]",
+                     getTerms(map_labels)))),
+                HTML)) %>%
+  addPolygons(data =  subset(label_shp, year == "2016"),
               group = "2016",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
-  addPolygons(data = label_shp[label_shp$year=="2019",],
+              popup = ~lapply(eval(str2expression(
+                gsub("label_shp",
+                     "label_shp[label_shp$year=='2016',]",
+                     getTerms(map_labels)))),
+                HTML)) %>%
+  addPolygons(data =  subset(label_shp, year == "2019"),
               group = "2019",
               weight = 1,
               fillColor = ~pal(year),
               fillOpacity = 1,
               stroke = T,
               color = "#CACACA",
-              popup = ~lapply(map_labels, HTML)) %>%
+              popup = ~lapply(eval(str2expression(
+                gsub("label_shp",
+                     "label_shp[label_shp$year=='2019',]",
+                     getTerms(map_labels)))),
+                HTML)) %>%
   addLabelOnlyMarkers(lat = label_shp$lab_lon,
                       lng = label_shp$lab_lat,
                       label = label_shp$precinct,
