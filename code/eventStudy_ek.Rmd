@@ -235,15 +235,20 @@ shootings_cure <- genIndicators(-6, 3)
 popMerge <- precinct_pop %>% select(precinct_2020, p0010001) %>% 
   rename(precinct=precinct_2020,pop=p0010001)
 shootings_cure <- shootings_cure %>% left_join(popMerge, by=join_by(precinct))
+
+#Drop precinct 22---it's Central Park, only saw one shooting there in data
+shootings_cure <- shootings_cure %>% filter(precinct!=22)
 ```
 
 ```{r}
 #regression
 
+#event study regression
 model <- lm(numShootings ~ scale(pop) + factor(precinct) + factor(year) + lag6 + lag5 + lag4 + 
               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=shootings_cure)
 summary(model)
 
+#get coefficients/std errors for lags/leads
 coefs <- coef(summary(model))
 coefs <- tail(coefs, 9)
 coef_df <- data.frame(
@@ -252,16 +257,20 @@ coef_df <- data.frame(
   lowerCI = coefs[, "Estimate"] - 1.96*coefs[, "Std. Error"],
   upperCI = coefs[, "Estimate"] + 1.96*coefs[, "Std. Error"]
 )
+
+#add row for lag1, which was excluded as the baseline
 coef_df <- rbind(coef_df, c('lag1TRUE', 0, 0, 0))
 coef_df <- coef_df %>% mutate(estimate=as.numeric(estimate),
                               lowerCI=as.numeric(lowerCI),
                               upperCI=as.numeric(upperCI))
 
-
+#do below to plot coefficients in the right order
 coef_df <- coef_df %>% 
   mutate(variable = fct_relevel(variable, 'lag6TRUE','lag5TRUE','lag4TRUE','lag3TRUE',
                                 'lag2TRUE', 'lag1TRUE', 'lag0TRUE','lead1TRUE',
                                 'lead2TRUE','lead3TRUE'))
+
+#Plot coefficients with 95% CIs
 xlabs <- c('<= -6','-5','-4','-3','-2','-1','0','1','2','>= 3')
 ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
   geom_point(size=3) +
