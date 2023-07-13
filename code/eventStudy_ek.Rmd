@@ -1,0 +1,291 @@
+---
+title: "eventStudy_ek"
+author: "Eric Koepcke"
+date: "2023-07-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("../code/00_load_dependencies.R")
+library(forcats)
+```
+
+```{r}
+# Read in all data used
+# Shootings
+shootings_historical <-
+ #read.csv("../data/input/NYPD_Shooting_Incident_Data__Historic_-2.csv")
+  fread("https://data.cityofnewyork.us/resource/833y-fsy8.csv?$limit=9999999999999999") %>% clean_names()
+
+shootings_ytd <- 
+  #read.csv("../data/input/NYPD_Shooting_Incident_Data__Year_To_Date_-2.csv")
+  fread("https://data.cityofnewyork.us/resource/5ucz-vwe8.csv?$limit=9999999999999") %>% clean_names()
+
+# Population by precinct
+precinct_pop <- read.csv("../data/input/nyc_2010pop_2020precincts.csv") %>% clean_names()
+
+# Program dates
+program_dates <- read_excel("../data/input/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
+```
+
+```{r}
+##########################################
+#Shootings data exploration, cleaning
+##########################################
+
+#Gives dimensions, variables names/types, and first several values
+glimpse(shootings_ytd)
+glimpse(shootings_historical)
+
+#Use mutate for variable creation, modification, and deletion. Used here to convert var type
+shootings_ytd <- (shootings_ytd %>% 
+                     mutate(statistical_murder_flag = ifelse(statistical_murder_flag=="Y", TRUE, FALSE)))
+
+#append datasets
+shootings <- bind_rows(shootings_ytd, shootings_historical)
+#delete objects
+rm(shootings_ytd, shootings_historical)
+
+#Changes date column into three variables
+shootings <- (shootings %>% 
+  separate(occur_date, c("year","month","day"), sep="-", remove=FALSE) %>% 
+    mutate(year = as.integer(year), month = as.integer(month), day = as.integer(day)))
+
+#indicator for rows that came from YTD file
+shootings <- (shootings %>% mutate(fromYTD = (year==2023)))
+
+#sort
+shootings <- (shootings %>% arrange(year, month, day))
+
+#number of missing values by variable
+colSums(is.na(shootings))
+
+#There's no duplicates based on all variables
+n_distinct(shootings)
+#incident keys are not unique though
+n_distinct(shootings$incident_key)
+#isolate the duplicates
+temp <- (shootings %>% 
+           mutate(dupKey = (duplicated(incident_key) | duplicated(incident_key, fromLast = TRUE))) %>%
+           filter(dupKey==TRUE) %>% 
+           arrange(incident_key))
+#Looks like duplicates do pertain to a particular incident, the duplicates perhaps 
+#indicate multiple perps or multiple victims
+
+shootings %>% count(year)
+shootings %>% count(month)
+
+shootings %>% count(boro)
+
+#lot of missing values---before 2022 don't have inside/outside indicator
+table(shootings$year, shootings$loc_of_occur_desc, useNA = 'ifany')
+
+n_distinct(shootings$precinct)
+
+shootings %>% count(jurisdiction_code)
+table(shootings$loc_classfctn_desc, shootings$jurisdiction_code, useNA = 'ifany')
+
+#missing before 2022
+shootings %>% count(loc_classfctn_desc)
+
+#A lot missing in each year
+shootings %>% count(location_desc)
+
+shootings %>% count(statistical_murder_flag)
+
+#a lot of missing values
+shootings %>% count(perp_age_group)
+shootings %>% count(perp_sex)
+shootings %>% count(perp_race)
+shootings %>% count(vic_age_group)
+shootings %>% count(vic_sex)
+shootings %>% count(vic_race)
+
+sum(is.na(shootings$latitude))
+sum(is.na(shootings$longitude))
+sum(substr(shootings$geocoded_column, start=1, stop=5)!='POINT')
+
+#convert missing values to NA
+shootings <- shootings %>% 
+  mutate(loc_of_occur_desc = ifelse(loc_of_occur_desc=="", NA, loc_of_occur_desc),
+         loc_classfctn_desc = ifelse(loc_classfctn_desc %in% c("", "(null)"), NA, loc_classfctn_desc),
+         location_desc = ifelse(location_desc %in% c("NONE", "(null)", ""), NA, location_desc),
+         perp_age_group = ifelse(perp_age_group %in% 
+                                   c("", "(null)", "1020", "1028", "224", "940", "UNKNOWN"), 
+                                 NA, perp_age_group),
+         perp_sex = ifelse(perp_sex %in% c("", "(null)", "U"), NA, perp_sex),
+         perp_race = ifelse(perp_race %in% c("", "(null)", "UNKNOWN"), NA, perp_race),
+         vic_age_group = ifelse(vic_age_group %in% c("1022", "UNKNOWN"), 
+                                 NA, vic_age_group),
+         vic_sex = ifelse(vic_sex=="U", NA, vic_sex),
+         vic_race = ifelse(vic_race=="UNKNOWN", NA, vic_race),
+         geocoded_column = ifelse(geocoded_column=="", NA, geocoded_column)) 
+
+#Change var types, setting to null deletes a var,
+shootings <- shootings %>% mutate(boro = as.factor(boro),
+                             loc_of_occur_desc = as.factor(loc_of_occur_desc),
+                             jurisdiction_code = as.factor(jurisdiction_code),
+                             loc_classfctn_desc = as.factor(loc_classfctn_desc),
+                             location_desc = as.factor(location_desc),
+                             perp_age_group = as.factor(perp_age_group),
+                             perp_sex = as.factor(perp_sex),
+                             perp_race = as.factor(perp_race),
+                             vic_age_group = as.factor(vic_age_group),
+                             vic_sex = as.factor(vic_sex),
+                             vic_race = as.factor(vic_race)
+                             )
+
+#create year-month variable
+shootings <- shootings %>% mutate(yr_month = as.yearmon(paste(year, month), format="%Y %m"))
+
+#Collapse data
+#Can come back and collapse at month level. Also make distinction between fatal/non-fatal shootings
+shootings_yr <- shootings %>% group_by(year, precinct) %>% 
+  summarise(boro = first(boro),
+            numShootings = n()) %>% ungroup() 
+
+#There should be 77 police precincts
+n_distinct(shootings_yr$precinct)
+#Not every precinct has a shooting in every year
+shootings_yr %>% group_by(year) %>% summarise(n = n_distinct(precinct))
+#Fill in missing year-precincts, i.e., create balanced panel
+shootings_yr <- shootings_yr %>% complete(year,precinct)
+shootings_yr <- shootings_yr %>% arrange(precinct, year)
+#replace NAs with appropriate values
+shootings_yr <- shootings_yr %>% mutate(numShootings = ifelse(is.na(numShootings), 0, numShootings))
+shootings_yr <- shootings_yr %>% group_by(precinct) %>% fill(boro, .direction="updown") %>% ungroup()
+
+```
+
+```{r}
+################################ 
+#Setup data for analysis
+################################
+
+########
+#Merge in CURE program data
+#Drop if not fully operational
+program_dates <- program_dates %>% filter(current_status=="Fully Operational")
+# Separate and filter program dates
+program_dates <- program_dates %>% separate(date_text, c("yearCure","monthCure")) %>%
+  mutate(yearCure = as.numeric(paste(20,yearCure,sep="")),
+         monthCure = match(monthCure, c('Jan', 'Feb', 'Mar', 'April', 'May', 'June', 
+                                        'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'))) %>% 
+  mutate(wavesCure=2022-yearCure)
+#Use 2019 and earlier enacted programs, want to study dynamic effects
+program_dates <- program_dates %>% mutate(curePre2020 = (yearCure < 2020))
+
+#Precincts 73 and 75 have two observations, keep first instance
+program_dates %>% count(precinct)
+program_dates <- program_dates %>% filter(duplicated(precinct)==FALSE)
+
+programMerge <- program_dates %>% select(precinct, yearCure, monthCure, wavesCure, curePre2020)
+
+#merge in program info
+shootings_cure <- shootings_yr %>% left_join(programMerge, by=join_by(precinct))
+shootings_cure <- shootings_cure %>% arrange(precinct,year)
+
+#Don't have full year of shootings data for 2023, so drop that year
+shootings_cure <- shootings_cure %>% filter(year<2023)
+
+#indicator to distinguish cure precincts from non-cure (incl. those who get cure post 2020) 
+#(use curePre2020 to distinguish betw cure precincts with cure before/after 2020)
+shootings_cure <- shootings_cure %>% mutate(curePrecinct = (curePre2020==TRUE)) %>%
+  mutate(curePrecinct = ifelse(is.na(curePrecinct), FALSE, curePrecinct))
+#indicator that Cure is currently "on"
+shootings_cure <- shootings_cure %>% 
+  mutate(cureOn = ifelse(curePrecinct==TRUE & year>=yearCure & !is.na(yearCure), TRUE, FALSE))
+
+#Create indicators for event study
+shootings_cure <- shootings_cure %>% mutate(year_offset = year-yearCure) %>% 
+  mutate(year_offset = ifelse(curePre2020==FALSE, NA, year_offset))
+#lb is the lower bound for lags
+#ub is the upper bound for leads
+#must have lb < 0, ub > 0
+genIndicators <- function(lb, ub) {
+  temp <- shootings_cure
+  for (i in lb:ub) {
+    if (i <= 0) {
+      j <- i*-1
+      newVar <- paste0('lag',j)
+    } else {
+      newVar <- paste0('lead',i)
+    }
+
+    #for lb "accumulate" lags before it, for ub "accumlate" the leads above it
+    if (i > lb & i < ub) {
+      temp <- temp %>% 
+        mutate(!!sym(newVar) := ifelse(!is.na(year_offset) & year_offset==i, TRUE, FALSE))
+    } else if (i==lb) {
+      temp <- temp %>% 
+        mutate(!!sym(newVar) := ifelse(!is.na(year_offset) & year_offset<=lb, TRUE, FALSE))
+    } else {
+      temp <- temp %>% 
+        mutate(!!sym(newVar) := ifelse(!is.na(year_offset) & year_offset>=ub, TRUE, FALSE))
+    }
+  }
+  return(temp)
+}
+#All Cure precincts have at least 6 years data pre-Cure and 3 years post-Cure
+shootings_cure %>% count(year_offset)
+shootings_cure <- genIndicators(-6, 3)
+
+#merge in population data
+popMerge <- precinct_pop %>% select(precinct_2020, p0010001) %>% 
+  rename(precinct=precinct_2020,pop=p0010001)
+shootings_cure <- shootings_cure %>% left_join(popMerge, by=join_by(precinct))
+```
+
+```{r}
+#regression
+
+model <- lm(numShootings ~ scale(pop) + factor(precinct) + factor(year) + lag6 + lag5 + lag4 + 
+              lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=shootings_cure)
+summary(model)
+
+coefs <- coef(summary(model))
+coefs <- tail(coefs, 9)
+coef_df <- data.frame(
+  variable = rownames(coefs),
+  estimate = coefs[, "Estimate"],
+  lowerCI = coefs[, "Estimate"] - 1.96*coefs[, "Std. Error"],
+  upperCI = coefs[, "Estimate"] + 1.96*coefs[, "Std. Error"]
+)
+coef_df <- rbind(coef_df, c('lag1TRUE', 0, 0, 0))
+coef_df <- coef_df %>% mutate(estimate=as.numeric(estimate),
+                              lowerCI=as.numeric(lowerCI),
+                              upperCI=as.numeric(upperCI))
+
+
+coef_df <- coef_df %>% 
+  mutate(variable = fct_relevel(variable, 'lag6TRUE','lag5TRUE','lag4TRUE','lag3TRUE',
+                                'lag2TRUE', 'lag1TRUE', 'lag0TRUE','lead1TRUE',
+                                'lead2TRUE','lead3TRUE'))
+xlabs <- c('<= -6','-5','-4','-3','-2','-1','0','1','2','>= 3')
+ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
+  geom_point(size=3) +
+  geom_line()+
+  geom_errorbar(aes(ymin=lowerCI,ymax=upperCI), width=0.2, color='blue') +
+  geom_hline(yintercept=0, color='black', alpha=0.5) +
+  geom_vline(xintercept = 7, linetype='dashed', color='black',alpha=0.5) +
+  labs(x="Years since Cure Implementation", y="Change in Shootings (per Precinct)",
+       caption='95% CIs are shown',title="Effect of Cure on Number of Shootings") +
+  scale_x_discrete(labels=xlabs)+
+  theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
+  theme_minimal()
+```
+
+```{r}
+#plotting
+
+#histogram
+shootings %>% filter(year < 2023) %>% ggplot(aes(x=year)) + geom_histogram(binwidth=1, color="white", fill="blue")
+shootings %>% filter(year < 2023 & statistical_murder_flag==TRUE) %>% ggplot(aes(x=year)) + geom_histogram(binwidth=1, color="white", fill="blue")
+shootings %>% filter(year < 2023 & statistical_murder_flag==FALSE) %>% ggplot(aes(x=year)) + geom_histogram(binwidth=1, color="white", fill="blue")
+
+shootings %>% ggplot(aes(x=yr_month)) + geom_histogram(bins=207, color="white", fill="blue")
+
+summary(shootings_yr$numShootings)
+shootings_yr %>% ggplot(aes(x=numShootings)) + geom_histogram(binwidth = 1, color="white", fill="blue")
+```
