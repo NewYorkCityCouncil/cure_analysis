@@ -189,7 +189,7 @@ shootings_cure <- shootings_cure %>% arrange(precinct,year)
 #Don't have full year of shootings data for 2023, so drop that year
 shootings_cure <- shootings_cure %>% filter(year<2023)
 
-#indicator to distinguish cure precincts from non-cure (incl. those who get cure post 2020) 
+#indicator to distinguish cure precincts from non-cure (incl. those who get cure post 2019) 
 #(use curePre2020 to distinguish betw cure precincts with cure before/after 2020)
 shootings_cure <- shootings_cure %>% mutate(curePrecinct = (curePre2020==TRUE)) %>%
   mutate(curePrecinct = ifelse(is.na(curePrecinct), FALSE, curePrecinct))
@@ -238,13 +238,17 @@ shootings_cure <- shootings_cure %>% left_join(popMerge, by=join_by(precinct))
 
 #Drop precinct 22---it's Central Park, only saw one shooting there in data
 shootings_cure <- shootings_cure %>% filter(precinct!=22)
+
+#Create shootings per 10,000 people var
+shootings_cure <- shootings_cure %>% mutate(numShootingsPP = (numShootings/pop)*10000)
+summary(shootings_cure$numShootingsPP)
 ```
 
 ```{r}
-#regression
-
 #event study regression
-model <- lm(numShootings ~ scale(pop) + factor(precinct) + factor(year) + lag6 + lag5 + lag4 + 
+#Can choose here which period to use as the leave-out/reference period, most common
+#choice is lag1. Can also use multiple reference periods.
+model <- lm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 + 
               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=shootings_cure)
 summary(model)
 
@@ -258,7 +262,7 @@ coef_df <- data.frame(
   upperCI = coefs[, "Estimate"] + 1.96*coefs[, "Std. Error"]
 )
 
-#add row for lag1, which was excluded as the baseline
+#add row for leave-out/reference period
 coef_df <- rbind(coef_df, c('lag1TRUE', 0, 0, 0))
 coef_df <- coef_df %>% mutate(estimate=as.numeric(estimate),
                               lowerCI=as.numeric(lowerCI),
@@ -297,4 +301,43 @@ shootings %>% ggplot(aes(x=yr_month)) + geom_histogram(bins=207, color="white", 
 
 summary(shootings_yr$numShootings)
 shootings_yr %>% ggplot(aes(x=numShootings)) + geom_histogram(binwidth = 1, color="white", fill="blue")
+
+#Plot average number of shootings (precinct level) by year for cure and non-cure precincts
+temp <- shootings_cure %>% group_by(curePrecinct, year) %>% summarise(numShootings = mean(numShootings))
+ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
+  geom_point(size=2) +
+  geom_line()+
+  ylim(0,70)+
+  labs(x="Year", y="Number of Shootings (per precinct)",
+       title="Avg. Number of Shootings, Cure vs. Control Precincts",
+       color="") +
+  scale_color_manual(values=c('red','blue'),labels=c("Control", 'Cure'))
+  theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
+  theme_minimal()
+
+#For Cure precincts, plot true and counterfactual (predicted) num. of shootings
+#get Cure precinct counterfactual
+model2 <- lm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 + 
+              lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=shootings_cure)
+#zero out event-time dummies
+model2$coefficients[93:101] = 0
+#make predictions
+predictions <- predict(model, newdata=shootings_cure, interval='confidence', level=0.95)
+temp <- cbind(shootings_cure, predictions)
+temp <- temp %>% filter(curePrecinct==TRUE) %>% group_by(year) %>% 
+  summarise(numShootings = mean(numShootings), predicted=mean(fit),
+            lwr = mean(lwr), upr=mean(upr))
+
+ggplot(data=temp) +
+  geom_point(aes(x=year, y=numShootings), size=2) +
+  geom_point(aes(x=year, y=predicted), size=2) +
+  geom_line(aes(x=year, y=numShootings, color='Cure'))+
+  geom_line(aes(x=year, y=predicted, color='Counterfactual'))+
+  geom_ribbon(aes(x = year, ymin=lwr, ymax=upr), fill="lightblue", alpha=0.3)+
+  ylim(15,70)+
+  labs(x="Year", y="Number of Shootings (per precinct)",
+       title="Avg. Number of Shootings, Cure vs. Counterfactual",
+       color="", caption="95% CIs are shown around the counterfactual") +
+  theme(plot.title = element_text(size=14, face='bold',hjust=0.5))
+  theme_minimal()
 ```
