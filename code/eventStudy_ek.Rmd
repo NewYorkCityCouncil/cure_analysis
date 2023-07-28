@@ -186,24 +186,8 @@ program_dates <- program_dates %>%
                                         'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'))) %>% 
   mutate(wavesCure=2022-yearCure)
 
-#Use 2019 and earlier fully operational programs as our Cure precincts,
-#want to study dynamic effects
-program_dates <- program_dates %>% 
-  mutate(curePre2020 = (yearCure < 2020))
-program_dates %>% count(curePre2020)
-
-#Flag early, mid, late adopters to explore spillover effects
-program_dates <- program_dates %>% 
-  mutate(earlyCure = (yearCure < 2015),
-         midCure = (yearCure %in% c(2015, 2016)),
-         lateCure = (yearCure == 2019))
-
 programMerge <- program_dates %>% 
-  select(precinct, yearCure, monthCure, wavesCure, curePre2020, earlyCure, midCure, lateCure)
-# programMerge <- programMerge %>% 
-#   mutate(yearCure = ifelse(!curePre2020,NA,yearCure),
-#          monthCure = ifelse(!curePre2020,NA,monthCure),
-#          wavesCure=ifelse(!curePre2020,NA,wavesCure))
+  select(precinct, yearCure, monthCure, wavesCure)
 
 #merge in program info
 shootings_cure <- shootings_yr %>% left_join(programMerge, by=join_by(precinct))
@@ -212,24 +196,56 @@ shootings_cure <- shootings_cure %>% arrange(precinct,year)
 #Don't have full year of shootings data for 2023, so drop that year
 shootings_cure <- shootings_cure %>% filter(year<2023)
 
-#indicator to distinguish cure precincts from non-cure (incl. those w/ curePre2020==False) 
-shootings_cure <- shootings_cure %>% 
-  mutate(curePrecinct = (curePre2020==TRUE & !is.na(curePre2020)))
-#indicator that Cure is currently "on"
-shootings_cure <- shootings_cure %>% 
-  mutate(cureOn = (curePrecinct==TRUE & year>=yearCure))
+#Drop precinct 22---it's Central Park, only saw one shooting there in data
+shootings_cure <- shootings_cure %>% filter(precinct!=22)
 
-#To explore spillovers, set treatment date to earliest treatment date for the 
-# "nearby" precincts (can play around with how this is defined)
-shootings_cure <- shootings_cure %>%
-  mutate(yearCureSO = ifelse(boro %in% c('BROOKLYN','QUEENS'), 2012, yearCure)) %>% 
-  mutate(yearCureSO = ifelse(boro %in% c('MANHATTAN','BRONX') | precinct==114, 2013, yearCureSO)) %>% 
-  mutate(yearCureSO = ifelse(is.na(curePre2020), NA, yearCureSO))
+#Flag Cure precincts
+shootings_cure <- shootings_cure %>% mutate(curePrecinct = !is.na(yearCure))
 
-#Create indicators for event study
+#Flag 2019 and earlier Cure precincts, want to study dynamic effects
+shootings_cure <- shootings_cure %>% 
+  mutate(curePre2020 = (curePrecinct & yearCure < 2020))
+
+#Flag early, mid, late adopters to explore spillover effects
+shootings_cure <- shootings_cure %>% 
+  mutate(earlyCure = (curePrecinct & yearCure < 2015),
+         midCure = (curePrecinct & yearCure %in% c(2015, 2016)),
+         lateCure = (curePrecinct & yearCure == 2019))
+        
+#Flag whether Cure is "on" or not
+shootings_cure <- shootings_cure %>% 
+  mutate(cureOn = (curePrecinct & year>=yearCure))
+
+#Flag control precincts that are touching Cure precincts and, thus,
+#may be affected by spillovers and might not be appropriate controls
+shootings_cure <- shootings_cure %>% 
+  mutate(controlSO = (precinct %in% c(19,26,28,30,33,41,45,49,50,61,62,63,66,72,78,83,
+                                      84,90,100,102,104,106,107,108,111,115,121,122)))
+
+#To explore spillovers, for each precinct that's touching a Cure 
+#precinct (not including itself), create "spillover treatment" date set to the
+#earliest yearCure for any Cure precinct touching it
+shootings_cure <- shootings_cure %>% 
+  mutate(yearSO = ifelse(precinct %in% c(67,69,71,73,78,79,81,83,88,102,104,106), 2012, NA)) %>%
+  mutate(yearSO = ifelse(precinct %in% c(41,42,44,103,105), 2013, yearSO)) %>% 
+  mutate(yearSO = ifelse(precinct %in% c(121,122), 2014, yearSO)) %>%
+  mutate(yearSO = ifelse(precinct %in% c(40,43,46,48,52,75,77,90,100), 2015, yearSO)) %>%
+  mutate(yearSO = ifelse(precinct %in% c(19,25,26,28,30,33,45,49,50,61,62,108,115), 2016, yearSO)) %>%
+  mutate(yearSO = ifelse(precinct %in% c(23,32,47,84), 2019, yearSO)) %>%
+  mutate(yearSO = ifelse(precinct %in% c(63,66,70,72,107,111,113), 2021, yearSO))
+
+#Flag whether "spillover treatment" is "on" or not
+shootings_cure <- shootings_cure %>% 
+  mutate(spilloverOn = (!is.na(yearSO) & year>=yearSO))
+
+#Create event-time variables
 shootings_cure <- shootings_cure %>% 
   mutate(year_offset = year-yearCure,
-         year_offsetSO = year-yearCureSO)
+         year_offsetSO = year-yearSO)
+shootings_cure %>% count(year_offset)
+shootings_cure %>% count(year_offsetSO)
+
+#Create indicators for event study regressions
 #lb is the lower bound for lags
 #ub is the upper bound for leads
 #must have lb < 0, ub > 0
@@ -239,41 +255,59 @@ genIndicators <- function(lb, ub) {
     if (i <= 0) {
       j <- i*-1
       newVar <- paste0('lag',j)
-      newVarSO <- paste0('lagSO',j)
     } else {
       newVar <- paste0('lead',i)
+    }
+
+    #for lb "accumulate" lags before it, for ub "accumlate" the leads above it
+    if (i > lb & i < ub) {
+      temp <- temp %>% 
+        mutate(!!sym(newVar) := (!is.na(year_offset) & year_offset==i))
+    } else if (i==lb) {
+      temp <- temp %>% 
+        mutate(!!sym(newVar) := (!is.na(year_offset) & year_offset<=lb))
+        
+    } else {
+      temp <- temp %>% 
+        mutate(!!sym(newVar) := (!is.na(year_offset) & year_offset>=ub))
+    }
+  }
+  return(temp)
+}
+#similar function for "spillover treatment" lags/leads
+genIndicatorsSO <- function(lb, ub) {
+  temp <- shootings_cure
+  for (i in lb:ub) {
+    if (i <= 0) {
+      j <- i*-1
+      newVarSO <- paste0('lagSO',j)
+    } else {
       newVarSO <- paste0('leadSO',i)
     }
 
     #for lb "accumulate" lags before it, for ub "accumlate" the leads above it
     if (i > lb & i < ub) {
       temp <- temp %>% 
-        mutate(!!sym(newVar) := (!is.na(year_offset) & year_offset==i),
-               !!sym(newVarSO) := (!is.na(year_offsetSO) & year_offsetSO==i))
+        mutate(!!sym(newVarSO) := (!is.na(year_offsetSO) & year_offsetSO==i))
     } else if (i==lb) {
       temp <- temp %>% 
-        mutate(!!sym(newVar) := (!is.na(year_offset) & year_offset<=lb),
-               !!sym(newVarSO) := (!is.na(year_offsetSO) & year_offsetSO<=lb))
+        mutate(!!sym(newVarSO) := (!is.na(year_offsetSO) & year_offsetSO<=lb))
         
     } else {
       temp <- temp %>% 
-        mutate(!!sym(newVar) := (!is.na(year_offset) & year_offset>=ub),
-               !!sym(newVarSO) := (!is.na(year_offsetSO) & year_offsetSO>=ub))
+        mutate(!!sym(newVarSO) := (!is.na(year_offsetSO) & year_offsetSO>=ub))
     }
   }
   return(temp)
 }
-#All Cure precincts have at least 6 years data pre-Cure and 3 years post-Cure,
 #Can play around here with how many lags/leads to include
 shootings_cure <- genIndicators(-6, 3)
+shootings_cure <- genIndicatorsSO(-6, 3)
 
 #merge in population data
 popMerge <- precinct_pop %>% select(precinct_2020, p0010001) %>% 
   rename(precinct=precinct_2020,pop=p0010001)
 shootings_cure <- shootings_cure %>% left_join(popMerge, by=join_by(precinct))
-
-#Drop precinct 22---it's Central Park, only saw one shooting there in data
-shootings_cure <- shootings_cure %>% filter(precinct!=22)
 
 #Create shootings per 10,000 people var
 shootings_cure <- shootings_cure %>% mutate(numShootingsPP = (numShootings/pop)*10000)
@@ -282,7 +316,18 @@ summary(shootings_cure$numShootingsPP)
 ########
 #SUBSET THE DATA HERE HOW YOU WANT IT FOR THE ANALYSIS
 ########
-df_analysis <- shootings_cure %>% filter(is.na(curePre2020) | curePre2020)
+#Including all precincts
+df_analysis <- shootings_cure
+#Exclude post-2019 Cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | curePre2020)
+#Only pure control and 2012-2014 cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | earlyCure)
+#Only pure control and 2015-2016 cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | midCure)
+#Only pure control and 2019 cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | lateCure)
+#Only non-touching pure controls and pre-2019 Cure
+# df_analysis <- shootings_cure %>% filter((!curePrecinct & !controlSO) | curePre2020)
 
 ```
 
@@ -325,11 +370,11 @@ coef_df <- coef_df %>% mutate(estimate=as.numeric(estimate),
                               upperCI=as.numeric(upperCI))
 
 #do below to plot coefficients in the right order
-coef_df <- coef_df %>% 
+coef_df <- coef_df %>%
   mutate(variable = fct_relevel(variable, 'lag6TRUE','lag5TRUE','lag4TRUE','lag3TRUE',
                                 'lag2TRUE', 'lag1TRUE', 'lag0TRUE','lead1TRUE',
                                 'lead2TRUE','lead3TRUE'))
-# coef_df <- coef_df %>% 
+# coef_df <- coef_df %>%
 #   mutate(variable = fct_relevel(variable, 'lagSO6TRUE','lagSO5TRUE','lagSO4TRUE','lagSO3TRUE',
 #                                 'lagSO2TRUE', 'lagSO1TRUE', 'lagSO0TRUE','leadSO1TRUE',
 #                                 'leadSO2TRUE','leadSO3TRUE'))
@@ -363,18 +408,17 @@ summary(shootings_yr$numShootings)
 shootings_yr %>% ggplot(aes(x=numShootings)) + geom_histogram(binwidth = 1, color="white", fill="blue")
 
 #Plot histogram of Cure implementation years
-temp <- shootings_cure %>% filter(curePrecinct==TRUE) %>% group_by(precinct) %>%
+temp <- shootings_cure %>% filter(curePrecinct) %>% group_by(precinct) %>%
   summarise(yearCure = first(yearCure))
 ggplot(data=temp, aes(x=yearCure)) + 
   geom_histogram(binwidth=1, color='white', fill='blue') +
-  xlim(2006,2022) +
+  xlim(2010,2024)+
   labs(x='Year', y='Number of Precincts',
        title='Cure Implementation Dates')+
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
   
 #Plot average number of shootings (precinct level) by year for cure and non-cure precincts
-#can include/exclude post-2019 cure precincts
 temp <- df_analysis %>% group_by(curePrecinct, year) %>% summarise(numShootings = mean(numShootings))
 ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
   geom_point(size=2) +
@@ -388,7 +432,7 @@ ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
   theme_minimal()
 
 #Plot average number of shootings (precinct level) by year for cure and post-2019 cure precincts
-temp <- shootings_cure %>% filter(!is.na(curePre2020)) %>% group_by(curePre2020, year) %>% summarise(numShootings = mean(numShootings))
+temp <- shootings_cure %>% filter(curePrecinct) %>% group_by(curePre2020, year) %>% summarise(numShootings = mean(numShootings))
 ggplot(data=temp, aes(x=year, y=numShootings, color=curePre2020)) +
   geom_point(size=2) +
   geom_line()+
@@ -399,18 +443,34 @@ ggplot(data=temp, aes(x=year, y=numShootings, color=curePre2020)) +
   scale_color_manual(values=c('red','blue'),labels=c("post-2019", 'Cure'))
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
+  
+#Plot average number of shootings (precinct level) by year for control precincts, those
+#touching vs. not touching any Cure precincts
+temp <- shootings_cure %>% filter(!curePrecinct) %>% 
+  group_by(controlSO, year) %>% summarise(numShootings = mean(numShootings))
+ggplot(data=temp, aes(x=year, y=numShootings, color=controlSO)) +
+  geom_point(size=2) +
+  geom_line()+
+  ylim(0,20)+
+  labs(x="Year", y="Number of Shootings (per precinct)",
+       title="Avg. Number of Shootings, Non-Cure Precincts",
+       color="") +
+  scale_color_manual(values=c('red','blue'),labels=c("Not Touching", 'Touching'))
+  theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
+  theme_minimal()
 
 #For Cure precincts, plot true and counterfactual (predicted) num. of shootings
 #get Cure precinct counterfactual
-#can include/exclude post-2019 cure precincts
 model2 <- lm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=df_analysis)
+# model2 <- lm(numShootings ~ factor(precinct) + factor(year) + lagSO6 + lagSO5 + lagSO4 +
+#               lagSO3 + lagSO2 + lagSO0 + leadSO1 + leadSO2 + leadSO3, data=df_analysis)
 #zero out Cure treatment effects
 model2$coefficients[93:101] = 0
 #make predictions
-predictions <- predict(model2, interval='confidence', level=0.95)
+predictions <- predict(model2, newdata=df_analysis, interval='confidence', level=0.95)
 temp <- cbind(df_analysis, predictions)
-temp <- temp %>% filter(curePrecinct==TRUE) %>% group_by(year) %>% 
+temp <- temp %>% filter(curePrecinct) %>% group_by(year) %>% 
   summarise(numShootings = mean(numShootings), predicted=mean(fit),
             lwr = mean(lwr), upr=mean(upr))
 
@@ -426,4 +486,28 @@ ggplot(data=temp) +
        color="", caption="95% CIs are shown around the counterfactual") +
   theme(plot.title = element_text(size=14, face='bold',hjust=0.5))
   theme_minimal()
+  
+#Alternatively, filter out data for cure/spillover precincts after they've been 
+  #exposed to Cure (possibly via spillover)
+temp <- df_analysis %>% 
+  filter(!((curePrecinct | controlSO) & (cureOn | spilloverOn)))
+#Just estimate the precinct and year FEs. Year FEs for later years are now
+#being solely estimated by pure control precincts. Precinct FEs are being estimated
+#using data from years prior to any Cure exposure
+modelFE <- lm(numShootings ~ factor(precinct) + factor(year), data=temp)
+predictions <- predict(modelFE, newdata=df_analysis, interval='confidence', level=0.95)
+#RUN appropriate code above to create plot from this
+
+#Aside: use this model to residualize out FEs from full data
+# temp <- cbind(df_analysis, predictions)
+# temp <- temp %>% mutate(numShootingsResid = numShootings-fit)
+# 
+# ggplot(data=(temp %>% filter(curePrecinct)), aes(x=numShootingsResid)) + geom_histogram(binwidth=5, color="white", fill="blue")
+# ggplot(data=(temp %>% filter(!curePrecinct)), aes(x=numShootingsResid)) + geom_histogram(binwidth=5, color="white", fill="blue")
+# 
+# #Try to decompose treatment into a Cure and spillover effect
+# #Note that the SEs won't be right, b/c we need to correct for the fact that
+# #numShootingsResid is predicted from a previous regression
+# modelSO <- lm(numShootingsResid ~ cureOn + spilloverOn + cureOn:spilloverOn, data=temp)
+# summary(modelSO)
 ```
