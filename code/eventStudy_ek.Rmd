@@ -11,6 +11,10 @@ source("../code/00_load_dependencies.R")
 library(forcats)
 library(sandwich)
 library(lmtest)
+library(stargazer)
+if (Sys.getenv("HOME")=="/Users/ekoepcke") {
+  figPth <- "/Users/ekoepcke/Desktop/DataTeam/Projects/CureViolence/cure_analysis/paper/figuresTables" 
+}
 ```
 
 ```{r}
@@ -73,7 +77,7 @@ temp <- (shootings %>%
            filter(dupKey==TRUE) %>% 
            arrange(incident_key))
 #Looks like duplicates do pertain to a particular incident, the duplicates perhaps 
-#indicate multiple perps or multiple victims
+#indicate multiple perps or multiple victims (multiple victims according to data notes)
 
 shootings %>% count(year)
 shootings %>% count(month)
@@ -173,9 +177,9 @@ shootings_yr <- shootings_yr %>% group_by(precinct) %>% fill(boro, .direction="u
 #Merge in CURE program data
 
 #Precincts 40,44,67,73,75,114 have multiple rows. In each, it's appropriate to keep the
-#first/earliest row---this keeps the (earliest) fully operational Cure program (and
-#the start up program for precinct 67)
+#first/earliest row (except for precinct 67)---this keeps the (earliest) fully operational Cure program
 program_dates %>% count(precinct)
+program_dates <- program_dates %>% filter(!(precinct==67 & date_text=='22-Jan'))
 program_dates <- program_dates %>% filter(duplicated(precinct)==FALSE)
 
 # Separate and filter program dates
@@ -244,6 +248,12 @@ shootings_cure <- shootings_cure %>%
          year_offsetSO = year-yearSO)
 shootings_cure %>% count(year_offset)
 shootings_cure %>% count(year_offsetSO)
+
+shootings_cure <- shootings_cure %>% 
+  mutate(yrPostCure = ifelse(is.na(year_offset) | year_offset<0, 0, year_offset))
+shootings_cure <- shootings_cure %>% 
+  mutate(yrPostSO = ifelse(is.na(year_offsetSO) | year_offsetSO<0, 0, year_offsetSO))
+shootings_cure %>% count(yrPostSO)
 
 #Create indicators for event study regressions
 #lb is the lower bound for lags
@@ -317,15 +327,21 @@ summary(shootings_cure$numShootingsPP)
 #SUBSET THE DATA HERE HOW YOU WANT IT FOR THE ANALYSIS
 ########
 #Including all precincts
-df_analysis <- shootings_cure
+# df_analysis <- shootings_cure
 #Exclude post-2019 Cure precincts
-# df_analysis <- shootings_cure %>% filter(!curePrecinct | curePre2020)
+df_analysis <- shootings_cure %>% filter(!curePrecinct | curePre2020)
 #Only pure control and 2012-2014 cure precincts
 # df_analysis <- shootings_cure %>% filter(!curePrecinct | earlyCure)
 #Only pure control and 2015-2016 cure precincts
 # df_analysis <- shootings_cure %>% filter(!curePrecinct | midCure)
 #Only pure control and 2019 cure precincts
 # df_analysis <- shootings_cure %>% filter(!curePrecinct | lateCure)
+#Only pure control and pre-2019 cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | earlyCure | midCure)
+#Only pure control and 2021 cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | !curePre2020)
+#Only include Cure precincts (before 2021)
+# df_analysis <- shootings_cure %>% filter(curePrecinct & curePre2020)
 #Only non-touching pure controls and pre-2019 Cure
 # df_analysis <- shootings_cure %>% filter((!curePrecinct & !controlSO) | curePre2020)
 
@@ -381,17 +397,43 @@ coef_df <- coef_df %>%
 
 #Plot coefficients with 95% CIs
 xlabs <- c('<= -6','-5','-4','-3','-2','-1','0','1','2','>= 3')
-ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
+plt <- ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
   geom_point(size=3) +
   geom_line()+
   geom_errorbar(aes(ymin=lowerCI,ymax=upperCI), width=0.2, color='blue') +
   geom_hline(yintercept=0, color='black', alpha=0.5) +
   geom_vline(xintercept = 7, linetype='dashed', color='black',alpha=0.5) +
-  labs(x="Years since Cure Implementation", y="Change in Shootings (per Precinct)",
-       caption='95% CIs are shown',title="Effect of Cure on Number of Shootings") +
+  labs(x="Years since Cure Implementation", y="Change in Shootings (per Precinct)") +
   scale_x_discrete(labels=xlabs)+
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
+ggsave(file.path(figPth,"mainES.pdf"), plt, width=5, height=4, units="in")
+
+stargazer(model, type='latex', style='aer', out=file.path(figPth,"mainESTab.tex"),
+          covariate.labels=c('<=6 years pre-Cure','5 years pre-Cure','4 years pre-Cure',
+                             '3 years pre-Cure','2 years pre-Cure','Cure start year',
+                             '1 year post-Cure','2 years post-Cure','>=3 years post-Cure'),
+          dep.var.labels=c('Num. of Shootings'), align=TRUE, df=FALSE, header=FALSE,
+          keep=c(85:93), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n')
+
+#Single indicator model
+model1 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn, data=df_analysis)
+summary(model1)
+
+#Model with linear dynamic treatment effects
+model2 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn +
+              yrPostCure, data=df_analysis)
+summary(model2)
+
+#model with quadratic dynamic treatment effects
+model3 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn +
+              yrPostCure + I(yrPostCure^2), data=df_analysis)
+summary(model3)
+
+stargazer(list(model1,model2,model3), type='latex', style='aer', out=file.path(figPth,"nonESRegTab.tex"),
+          covariate.labels=c('Cure Implemented', 'Num. Years of Cure', 'Num. Years of Cure Sq.'),
+          dep.var.labels=c('Num. of Shootings'), align=TRUE, df=FALSE, header=FALSE,
+          keep=c(85:88), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n')
 ```
 
 ```{r}
@@ -410,26 +452,26 @@ shootings_yr %>% ggplot(aes(x=numShootings)) + geom_histogram(binwidth = 1, colo
 #Plot histogram of Cure implementation years
 temp <- shootings_cure %>% filter(curePrecinct) %>% group_by(precinct) %>%
   summarise(yearCure = first(yearCure))
-ggplot(data=temp, aes(x=yearCure)) + 
+plt <- ggplot(data=temp, aes(x=yearCure)) + 
   geom_histogram(binwidth=1, color='white', fill='blue') +
-  xlim(2010,2024)+
-  labs(x='Year', y='Number of Precincts',
-       title='Cure Implementation Dates')+
-  theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
+  xlim(2010,2023)+
+  labs(x='Year', y='Number of Precincts')+
+  #theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
+ggsave(file.path(figPth,"cureDateHist.pdf"), plt, width=5, height=3, units="in")
   
 #Plot average number of shootings (precinct level) by year for cure and non-cure precincts
 temp <- df_analysis %>% group_by(curePrecinct, year) %>% summarise(numShootings = mean(numShootings))
-ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
+plt <- ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
   geom_point(size=2) +
   geom_line()+
   ylim(0,70)+
   labs(x="Year", y="Number of Shootings (per precinct)",
-       title="Avg. Number of Shootings, Cure vs. Control Precincts",
        color="") +
-  scale_color_manual(values=c('red','blue'),labels=c("Control", 'Cure'))
-  theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
+  scale_color_manual(values=c('red','blue'),labels=c("Control", 'Cure'))+
+  theme(legend.position='bottom', plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
+ggsave(file.path(figPth,"numShootings_byCure.pdf"), plt, width=5, height=4, units="in")
 
 #Plot average number of shootings (precinct level) by year for cure and post-2019 cure precincts
 temp <- shootings_cure %>% filter(curePrecinct) %>% group_by(curePre2020, year) %>% summarise(numShootings = mean(numShootings))
