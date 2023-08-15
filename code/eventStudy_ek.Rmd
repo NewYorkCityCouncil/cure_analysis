@@ -242,6 +242,10 @@ shootings_cure <- shootings_cure %>%
 shootings_cure <- shootings_cure %>% 
   mutate(spilloverOn = (!is.na(yearSO) & year>=yearSO))
 
+#RUN this line if want to use min(yearCure, yearSO) as the ``treatment date''
+# shootings_cure <- shootings_cure %>%
+#   mutate(yearCure = ifelse(curePrecinct & !is.na(yearSO) & yearSO<yearCure, yearSO, yearCure))
+
 #Create event-time variables
 shootings_cure <- shootings_cure %>% 
   mutate(year_offset = year-yearCure,
@@ -338,13 +342,28 @@ df_analysis <- shootings_cure %>% filter(!curePrecinct | curePre2020)
 # df_analysis <- shootings_cure %>% filter(!curePrecinct | lateCure)
 #Only pure control and pre-2019 cure precincts
 # df_analysis <- shootings_cure %>% filter(!curePrecinct | earlyCure | midCure)
+#Only pure control and post-2014 cure precincts
+# df_analysis <- shootings_cure %>% filter(!curePrecinct | midCure | lateCure)
 #Only pure control and 2021 cure precincts
 # df_analysis <- shootings_cure %>% filter(!curePrecinct | !curePre2020)
-#Only include Cure precincts (before 2021)
-# df_analysis <- shootings_cure %>% filter(curePrecinct & curePre2020)
-#Only non-touching pure controls and pre-2019 Cure
+#Only include pre-2020 Cure precincts
+# df_analysis <- shootings_cure %>% filter(curePre2020)
+#Only non-touching pure controls and pre-2020 Cure
 # df_analysis <- shootings_cure %>% filter((!curePrecinct & !controlSO) | curePre2020)
-
+#Only control units
+# df_analysis <- shootings_cure %>% filter(!curePrecinct)
+#Exclude cure precincts with yearSO>=yearCure
+# df_analysis <- shootings_cure %>%
+#   filter(!curePrecinct | (curePre2020 & !is.na(yearSO) & yearSO<yearCure))
+#Exclude cure precincts with yearSO>=yearCure and touching control units
+# df_analysis <- shootings_cure %>%
+#   filter((!curePrecinct & !controlSO)  | (curePre2020 & !is.na(yearSO) & yearSO<yearCure))
+#Exclude cure precincts with yearSO<=yearCure and touching control units
+# df_analysis <- shootings_cure %>%
+#   filter((!curePrecinct & !controlSO)  | (curePre2020 & !is.na(yearSO) & yearSO>yearCure))
+#Only nontouching controls and non-SO Cure units
+# df_analysis <- shootings_cure %>%
+#   filter((!curePrecinct & !controlSO) | (curePre2020 & is.na(yearSO)))
 ```
 
 ```{r}
@@ -407,7 +426,7 @@ plt <- ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
   scale_x_discrete(labels=xlabs)+
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
-ggsave(file.path(figPth,"mainES.pdf"), plt, width=5, height=4, units="in")
+ggsave(file.path(figPth,"SOafterCureES.pdf"), plt, width=5, height=4, units="in")
 
 stargazer(model, type='latex', style='aer', out=file.path(figPth,"mainESTab.tex"),
           covariate.labels=c('<=6 years pre-Cure','5 years pre-Cure','4 years pre-Cure',
@@ -482,24 +501,38 @@ ggplot(data=temp, aes(x=year, y=numShootings, color=curePre2020)) +
   labs(x="Year", y="Number of Shootings (per precinct)",
        title="Avg. Number of Shootings, Cure vs. post-2019 Precincts",
        color="") +
-  scale_color_manual(values=c('red','blue'),labels=c("post-2019", 'Cure'))
+  scale_color_manual(values=c('red','blue'),labels=c("post-2019", 'Cure'))+
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
-  theme_minimal()
+
+#Plot avg shootings by year for early, mid, late Cure precincts
+temp1 <- shootings_cure %>% filter(earlyCure) %>% group_by(year) %>% summarise(numShootings = mean(numShootings))
+temp2 <- shootings_cure %>% filter(midCure) %>% group_by(year) %>% summarise(numShootings = mean(numShootings))
+temp3 <- shootings_cure %>% filter(lateCure) %>% group_by(year) %>% summarise(numShootings = mean(numShootings))
+plt <- ggplot() +
+  geom_point(data=temp1, aes(x=year, y=numShootings,color='<2015'), size=2) +
+  geom_line(data=temp1, aes(x=year, y=numShootings),color='red')+
+  geom_point(data=temp2, aes(x=year, y=numShootings,color='2015-16'), size=2) +
+  geom_line(data=temp2, aes(x=year, y=numShootings),color='blue')+
+  geom_point(data=temp3, aes(x=year, y=numShootings,color='2019'), size=2) +
+  geom_line(data=temp3, aes(x=year, y=numShootings),color='darkgreen')+
+  labs(x="Year", y="Number of Shootings (per precinct)",color='') +
+  scale_color_manual(values=c('red','blue','darkgreen'),labels=c("<2015", '2015-16','2019'))+
+  theme(legend.position='bottom')
+ggsave(file.path(figPth,"numShootings_byEarlyMidLate.pdf"), plt, width=5, height=4, units="in")
   
 #Plot average number of shootings (precinct level) by year for control precincts, those
 #touching vs. not touching any Cure precincts
 temp <- shootings_cure %>% filter(!curePrecinct) %>% 
   group_by(controlSO, year) %>% summarise(numShootings = mean(numShootings))
-ggplot(data=temp, aes(x=year, y=numShootings, color=controlSO)) +
+plt <- ggplot(data=temp, aes(x=year, y=numShootings, color=controlSO)) +
   geom_point(size=2) +
   geom_line()+
   ylim(0,20)+
   labs(x="Year", y="Number of Shootings (per precinct)",
-       title="Avg. Number of Shootings, Non-Cure Precincts",
        color="") +
-  scale_color_manual(values=c('red','blue'),labels=c("Not Touching", 'Touching'))
-  theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
-  theme_minimal()
+  scale_color_manual(values=c('red','blue'),labels=c("Non-Spillover", 'Spillover'))+
+  theme(legend.position='bottom')
+ggsave(file.path(figPth,"numShootings_byControlSO.pdf"), plt, width=5, height=4, units="in")
 
 #For Cure precincts, plot true and counterfactual (predicted) num. of shootings
 #get Cure precinct counterfactual
@@ -516,7 +549,7 @@ temp <- temp %>% filter(curePrecinct) %>% group_by(year) %>%
   summarise(numShootings = mean(numShootings), predicted=mean(fit),
             lwr = mean(lwr), upr=mean(upr))
 
-ggplot(data=temp) +
+plt <- ggplot(data=temp) +
   geom_point(aes(x=year, y=numShootings), size=2) +
   geom_point(aes(x=year, y=predicted), size=2) +
   geom_line(aes(x=year, y=numShootings, color='Cure'))+
@@ -524,10 +557,9 @@ ggplot(data=temp) +
   geom_ribbon(aes(x = year, ymin=lwr, ymax=upr), fill="lightblue", alpha=0.3)+
   #ylim(15,70)+
   labs(x="Year", y="Number of Shootings (per precinct)",
-       title="Avg. Number of Shootings, Cure vs. Counterfactual",
-       color="", caption="95% CIs are shown around the counterfactual") +
-  theme(plot.title = element_text(size=14, face='bold',hjust=0.5))
-  theme_minimal()
+       color="") +
+  theme(legend.position='bottom')
+ggsave(file.path(figPth,"numShootings_cureCntrFctl.pdf"), plt, width=5, height=4, units="in")
   
 #Alternatively, filter out data for cure/spillover precincts after they've been 
   #exposed to Cure (possibly via spillover)
