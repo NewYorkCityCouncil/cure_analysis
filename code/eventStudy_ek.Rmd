@@ -16,6 +16,7 @@ library(MASS)
 library(AER)
 library(zoo)
 library(ggiraph)
+library(htmlwidgets)
 if (Sys.getenv("HOME")=="/Users/ekoepcke") {
   figPth <- "/Users/ekoepcke/Desktop/DataTeam/Projects/CureViolence/cure_analysis/paper/figuresTables" 
 }
@@ -448,7 +449,7 @@ plt <- ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
   scale_y_continuous(labels = percent_format())+
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
-girafe(ggobj=plt)
+saveWidget(girafe(ggobj=plt),file.path(figPth,"mainPoisES.html"))
 ggsave(file.path(figPth,"SOafterCureES.pdf"), plt, width=5, height=4, units="in")
 
 stargazer(model, type='latex', style='aer', out=file.path(figPth,"mainESTab.tex"),
@@ -516,14 +517,15 @@ ggsave(file.path(figPth,"cureDateHist.pdf"), plt, width=5, height=3, units="in")
 #Plot average number of shootings (precinct level) by year for cure and non-cure precincts
 temp <- df_analysis %>% group_by(curePrecinct, year) %>% summarise(numShootings = mean(numShootings))
 plt <- ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
-  geom_point(size=2) +
+  geom_point_interactive(aes(tooltip=round(numShootings,digits=0)), size=2) +
   geom_line() +
   ylim(0,70)+
-  labs(x="Year", y="Number of Shootings (per precinct)",
+  labs(x="Year", y="Number of Shootings",
        color="") +
   scale_color_manual(values=c('red','blue'),labels=c("Control", 'Cure'))+
   theme(legend.position='bottom', plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
+saveWidget(girafe(ggobj=plt),file.path(figPth,"numShootings_byCure.html"))
 ggsave(file.path(figPth,"numShootings_byCure.pdf"), plt, width=5, height=4, units="in")
 
 #Plot average number of shootings (precinct level) by year for cure and post-2019 cure precincts
