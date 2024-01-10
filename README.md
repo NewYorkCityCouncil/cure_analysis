@@ -36,10 +36,19 @@ After adjusting for precinct populations and number of arrests, we see a statist
 It is important to note that we only adjusted for yearly arrests per precinct and precinct populations but were not able to take into account any other possible confounding variables. There were no interaction terms explored, nor a lag time to allow the intervention to take effect. Because of the impact of Covid-19 on crime levels, we extrapolated any data points after March 15th, 2020.
 
 ### Future Work
-The Council's data team hopes to further expand on this analysis to better understand the impact of the Cure violence program, and possibly other neighborhood investments, on crime rates. We are interested in exploring:
-
-- The introduction of a lag into the model
-- Neighborhood level effects
-- Accounting for covid-related effects for post 2020 data
+The City Council's Data Team hopes to further expand on this analysis to better understand the impact of the Cure violence program, and possibly other neighborhood investments, on crime rates. We are currently exploring different models, specifically an event study, to further support the efficacy of the programs as well as researching the possibility of spillover effects.
 
 ### Scripts
+Code
+- 00_load_dependencies.R Load packages neccessary for analysis
+- 00_read_data.Rmd Read in data files found in data folder
+- 01_cohort_map.R Map of precincts with cure violence programs
+- 01_map_shootings_2021.Rmd Map 2021 shootings per person by precinct and outline
+- 02_create_cure_analysis_dataset.Rmd Create dataset used for modeling/analysis
+- 02_precinct-shooting-averages-dataset_2006_2012.ipynb Calculate shooting averages by precinct for 2006-2012
+- 02_precinct-shootings-change-dataset_2011_2020.ipynb Calculate shooting averages by precinct for 2011-2020
+- 03_model.Rmd Run mixed negative binomial model with offset
+- 04_map-shooting-averages_by-precinct_2006_2012.R Map shooting averages by precinct
+- 04_wedge-table_precinct-shootings-change_2011-2020.R Create wedge table for shootings
+- eventStudy_ek.Rmd Additional work using event study and exploring spillover effects
+
