@@ -388,10 +388,12 @@ df_analysis <- shootings_cure %>% filter(!curePrecinct | curePre2020)
 model <- glm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=df_analysis, family='poisson')
 dispersiontest(model,trafo=1)
-model0 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
+model <- lm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=df_analysis)
 # model <- lm(numShootings ~ factor(precinct) + factor(year) + lagSO6 + lagSO5 + lagSO4 +
 #               lagSO3 + lagSO2 + lagSO0 + leadSO1 + leadSO2 + leadSO3, data=df_analysis)
+model <- glm(numShootings ~ factor(precinct) + factor(year) + lagSO6 + lagSO5 + lagSO4 +
+               lagSO3 + lagSO2 + lagSO0 + leadSO1 + leadSO2 + leadSO3, data=df_analysis, family='poisson')
 summary(model)
 
 #check for heteroskedasticity
@@ -450,7 +452,7 @@ plt <- ggplot(data = coef_df, aes(x=variable, y=estimate, group=1)) +
   theme(plot.title = element_text(size=16, face='bold',hjust=0.5))
   theme_minimal()
 saveWidget(girafe(ggobj=plt),file.path(figPth,"mainPoisES.html"))
-ggsave(file.path(figPth,"SOafterCureES.pdf"), plt, width=5, height=4, units="in")
+#ggsave(file.path(figPth,"SOafterCureES.pdf"), plt, width=5, height=4, units="in")
 
 stargazer(model, type='latex', style='aer', out=file.path(figPth,"mainESTab.tex"),
           covariate.labels=c('<=6 years pre-Cure','5 years pre-Cure','4 years pre-Cure',
@@ -463,6 +465,7 @@ stargazer(model, type='latex', style='aer', out=file.path(figPth,"mainESTab.tex"
 model1 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn, data=df_analysis)
 summary(model1)
 model1 <- glm(numShootings ~ factor(precinct) + factor(year) + cureOn, data=df_analysis, family='poisson')
+# model1 <- glm(numShootings ~ factor(precinct) + factor(year) + spilloverOn, data=df_analysis, family='poisson')
 summary(model1)
 coeftest(model1, vcov=vcovHC(model1, type='HC1'))
 
@@ -472,6 +475,7 @@ model2 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn +
 summary(model2)
 model2 <- glm(numShootings ~ factor(precinct) + factor(year) + cureOn +
               yrPostCure, data=df_analysis, family='poisson')
+# model2 <- glm(numShootings ~ factor(precinct) + factor(year) + spilloverOn + yrPostSO, data=df_analysis, family='poisson')
 summary(model2)
 coeftest(model2, vcov=vcovHC(model2, type='HC1'))
 
@@ -481,6 +485,7 @@ model3 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn +
 summary(model3)
 model3 <- glm(numShootings ~ factor(precinct) + factor(year) + cureOn +
               yrPostCure + I(yrPostCure^2), data=df_analysis, family='poisson')
+# model3 <- glm(numShootings ~ factor(precinct) + factor(year) + spilloverOn + yrPostSO + I(yrPostSO^2), data=df_analysis, family='poisson')
 summary(model3)
 coeftest(model3, vcov=vcovHC(model3, type='HC1'))
 
