@@ -385,13 +385,16 @@ cureESFig <- function(model, figName) {
 cureESTable <- function(model, tabName) {
   #robust SEs
   robust_se <- sqrt(diag(vcovHC(model, type = "HC1")))
+  #keep treatment coeffs
+  end <- length(coef(model))-1
+  start <- end-8
   
   stargazer(model, type='latex', style='aer', out=file.path(figPth,paste0(tabName,".tex")),
           covariate.labels=c('<=6 years pre-Cure','5 years pre-Cure','4 years pre-Cure',
                              '3 years pre-Cure','2 years pre-Cure','Cure start year',
                              '1 year post-Cure','2 years post-Cure','>=3 years post-Cure'),
           dep.var.labels=c('Log Change in Shootings'), align=TRUE, df=FALSE, header=FALSE,
-          keep=c(93:101), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
+          keep=c(start:end), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
           star.cutoffs = c(0.1,0.05,0.01), se=list(robust_se))
 }
 
@@ -432,12 +435,15 @@ cureDIDTables <- function(model1, model2, model3, tabName) {
   robust_se1 <- sqrt(diag(vcovHC(model1, type = "HC1")))
   robust_se2 <- sqrt(diag(vcovHC(model2, type = "HC1")))
   robust_se3 <- sqrt(diag(vcovHC(model3, type = "HC1")))
+  #keep treatment coeffs
+  end <- length(coef(model3))
+  start <- end-3
   
   stargazer(list(model1,model2,model3), type='latex', style='aer',
           out=file.path(figPth,paste0(tabName,".tex")),
           covariate.labels=c('Cure Implemented', 'Years of Cure', 'Years of Cure Sq.'),
           dep.var.labels=c('Log Change in Shootings'), align=TRUE, df=FALSE, header=FALSE,
-          keep=c(93:96), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
+          keep=c(start:end), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
           star.cutoffs = c(0.1,0.05,0.01), se=list(robust_se1,robust_se2,robust_se3))
 }
 
@@ -635,13 +641,16 @@ spilloverESFig <- function(model, figName) {
 spilloverESTable <- function(model, tabName) {
   #robust SEs
   robust_se <- sqrt(diag(vcovHC(model, type = "HC1")))
+  #keep treatment coeffs
+  end <- length(coef(model))-1
+  start <- end-8
   
   stargazer(model, type='latex', style='aer', out=file.path(figPth,paste0(tabName,".tex")),
           covariate.labels=c('<=6 years pre-Spillover','5 years pre-Spillover','4 years pre-Spillover',
                              '3 years pre-Spillover','2 years pre-Spillover','Spillover start year',
                              '1 year post-Spillover','2 years post-Spillover','>=3 years post-Spillover'),
           dep.var.labels=c('Log Change in Shootings'), align=TRUE, df=FALSE, header=FALSE,
-          keep=c(93:101), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
+          keep=c(start:end), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
           star.cutoffs = c(0.1,0.05,0.01), se=list(robust_se))
 }
 
@@ -683,12 +692,15 @@ spilloverDIDTables <- function(model1, model2, model3, tabName) {
   robust_se1 <- sqrt(diag(vcovHC(model1, type = "HC1")))
   robust_se2 <- sqrt(diag(vcovHC(model2, type = "HC1")))
   robust_se3 <- sqrt(diag(vcovHC(model3, type = "HC1")))
+  #keep treatment coeffs
+  end <- length(coef(model3))
+  start <- end-3
   
   stargazer(list(model1,model2,model3), type='latex', style='aer',
           out=file.path(figPth,paste0(tabName,".tex")),
           covariate.labels=c('Spillover Possible', 'Years of Spillover', 'Years of Spillover Sq.'),
           dep.var.labels=c('Log Change in Shootings'), align=TRUE, df=FALSE, header=FALSE,
-          keep=c(93:96), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
+          keep=c(start:end), keep.stat=c('n'), no.space=TRUE, notes=NULL, omit.table.layout='n',
           star.cutoffs = c(0.1,0.05,0.01), se=list(robust_se1,robust_se2,robust_se3))
 }
 
