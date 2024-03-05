@@ -10,8 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 source("../code/00_load_dependencies.R")
 ```
 
-
-
 ```{r}
 # Read in all data used
 # Shootings
@@ -39,7 +37,7 @@ precinct_pop <- read.csv("../data/input/nyc_2010pop_2020precincts.csv") %>% clea
 program_dates <- read_excel("../data/input/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
 
 # Separate and filter program dates
-programs_20 <- program_dates %>% separate(date_text, c("year","month")) %>% filter(year<20) %>% mutate(waves=20-as.numeric(year))
+programs_21 <- program_dates %>% separate(date_text, c("year","month")) %>% filter(year<=21) %>% mutate(waves=21-as.numeric(year))
 
 # Precinct shape file
 precinct.shp <- st_read(unzip_sf("https://data.cityofnewyork.us/api/geospatial/78dh-3ptz?method=export&format=Shapefile")) %>%  st_transform('+proj=longlat +datum=WGS84')
