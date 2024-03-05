@@ -56,8 +56,6 @@ generate_map_labels <- function(label_shp) {
                        label_shp$council_district,
                        "<br>","<b>Neighborhood Area Serviced: </b>",
                        label_shp$neighborhood_area_serviced,
-                       "<br>","<b>Rounds in Program: </b>",
-                       label_shp$waves,
                        "<br>","<b>Year Entering: </b>",
                        label_shp$year,
                        "<br>","<b>Number of Shootings: </b>",
@@ -186,4 +184,4 @@ m <- leaflet(options = leafletOptions(minZoom = 11, maxZoom = 13,
 
 m
 
-# saveWidget(m, file = "visuals/cohort_map.html")
+saveWidget(m, file = "visuals/cohort_map.html")
