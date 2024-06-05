@@ -3,6 +3,7 @@ title: "eventStudy_ek"
 author: "Eric Koepcke"
 date: "2023-07-03"
 output: html_document
+#Primary code file for the paper, most figures/tables are generated here
 ---
 
 ```{r setup, include=FALSE}
@@ -29,9 +30,6 @@ if (Sys.getenv("HOME")=="/Users/ekoepcke") {
 shootings_historical <-
   fread("https://data.cityofnewyork.us/resource/833y-fsy8.csv?$limit=9999999999999999") %>% clean_names()
 
-# shootings_ytd <- 
-#   fread("https://data.cityofnewyork.us/resource/5ucz-vwe8.csv?$limit=9999999999999") %>% clean_names()
-
 #Complaints
 complaints_historical <-
   fread("https://data.cityofnewyork.us/resource/qgea-i56i.csv?$limit=9999999999999999") %>% clean_names()
@@ -39,9 +37,6 @@ complaints_historical <-
 #Arrests
 arrests_historical <- 
   fread("https://data.cityofnewyork.us/resource/8h9b-rp9u.csv?$limit=9999999999999999") %>% clean_names()
-
-# Population by precinct
-# precinct_pop <- read.csv("../data/input/nyc_2010pop_2020precincts.csv") %>% clean_names()
 
 # Program dates
 program_dates <- read_excel("../data/input/CMS\ List\ 1.6.22\ for\ NYCC\ .xlsx") %>% clean_names()
@@ -56,13 +51,6 @@ nypdHC <- read_excel("../data/input/FY06-23 Actual Precinct Headcount.xlsx",shee
 ##########################################
 #Shootings data exploration, cleaning
 ##########################################
-
-#match format with historical data
-# shootings_ytd <- (shootings_ytd %>% 
-#                      mutate(statistical_murder_flag = ifelse(statistical_murder_flag=="Y", TRUE, FALSE)))
-
-#append datasets
-#shootings <- bind_rows(shootings_ytd, shootings_historical)
 
 #convert missing values to NA
 shootings <- shootings_historical %>% 
@@ -98,9 +86,6 @@ shootings <- shootings %>% mutate(boro = as.factor(boro),
 shootings <- (shootings %>% 
   separate(occur_date, c("year","month","day"), sep="-", remove=FALSE) %>% 
     mutate(year = as.integer(year), month = as.integer(month), day = as.integer(day)))
-
-#indicator for rows that came from YTD file
-shootings <- (shootings %>% mutate(fromYTD = (year==2023)))
 
 #sort
 shootings <- (shootings %>% arrange(year, month, day))
@@ -230,10 +215,6 @@ shootings_cure <- shootings_cure %>%
 shootings_cure <- shootings_cure %>% 
   mutate(spilloverOn = (!is.na(yearSO) & year>=yearSO))
 
-#run this line if want to use min(yearCure, yearSO) as the ``treatment date''
-# shootings_cure <- shootings_cure %>%
-#   mutate(yearCure = ifelse(curePrecinct & !is.na(yearSO) & yearSO<yearCure, yearSO, yearCure))
-
 #Create event-time variables
 shootings_cure <- shootings_cure %>% 
   mutate(year_offset = year-yearCure,
@@ -304,17 +285,6 @@ genIndicatorsSO <- function(lb, ub) {
 #Can play around here with how many lags/leads to include
 shootings_cure <- genIndicators(-6, 3)
 shootings_cure <- genIndicatorsSO(-6, 3)
-
-#merge in population data
-# popMerge <- precinct_pop %>% dplyr::select(precinct_2020, p0010001) %>% 
-#   rename(precinct=precinct_2020,pop=p0010001)
-# shootings_cure <- shootings_cure %>% left_join(popMerge, by=join_by(precinct))
-# #Create shootings per 10,000 people var
-# shootings_cure <- shootings_cure %>% mutate(numShootingsPP = (numShootings/pop)*10000)
-# summary(shootings_cure$numShootingsPP)
-
-#Flag pre-2021 cure precincts
-#shootings_cure <- shootings_cure %>% mutate(curePre2020 = (curePrecinct & yearCure!=2021))
 ```
 
 ```{r NYPD Funding and Headcount data}
@@ -335,10 +305,6 @@ nypdFunds <- nypdFunds %>% left_join(factor, by=join_by(year))
 nypdFunds <- nypdFunds %>% mutate(nypdFunds = nypdFunds*factor)
 nypdFunds <- nypdFunds %>% dplyr::select(-factor)
 
-#get change in funding
-nypdFunds <- nypdFunds %>% group_by(precinct) %>% mutate(fundsChange = c(NA,diff(nypdFunds)))
-nypdFunds <- nypdFunds %>% group_by(precinct) %>% mutate(lagFunds = lag(nypdFunds))
-
 #merge in
 shootings_cure <- shootings_cure %>% left_join(nypdFunds, by=join_by(precinct,year))
 
@@ -350,10 +316,6 @@ nypdHC <- pivot_longer(data=nypdHC, cols=starts_with('fy'), names_to='year',
                           names_prefix='fy', values_to='nypdHC')
 nypdHC <- nypdHC %>% mutate(year = as.integer(year)+2000, nypdHC = as.numeric(nypdHC))
 colSums(is.na(nypdHC))
-
-#get change in headcount
-nypdHC <- nypdHC %>% group_by(precinct) %>% mutate(HCChange = c(NA,diff(nypdHC)))
-nypdHC <- nypdHC %>% group_by(precinct) %>% mutate(lagHC = lag(nypdHC))
 
 #merge in
 shootings_cure <- shootings_cure %>% left_join(nypdHC, by=join_by(precinct,year))
@@ -485,13 +447,8 @@ shootings_cure <- shootings_cure %>%
 #Can choose which period to use as the leave-out/reference period, most common
 #choice is lag1. Can also use multiple reference periods
 cureESReg <- function(df_analysis) {
-  # model <- lm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
-  #               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=df_analysis)
   model <- glm(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
               lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=df_analysis, family='poisson')
-  # model <- glm.nb(numShootings ~ factor(precinct) + factor(year) + lag6 + lag5 + lag4 +
-  #             lag3 + lag2 + lag0 + lead1 + lead2 + lead3, data=df_analysis)
-  
   return(model)
 }
 
@@ -565,31 +522,18 @@ cureBinaryReg <- function(df_analysis) {
   #Binary Cure treatment model
   model1 <- glm(numShootings ~ factor(precinct) + factor(year) + cureOn, 
                 data=df_analysis, family='poisson')
-  #model1 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn, data=df_analysis)
-  #model1 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + cureOn, data=df_analysis)
-  
   return(model1)
 }
 cureLinearReg <- function(df_analysis) {
   #Linear dynamic Cure effects
   model2 <- glm(numShootings ~ factor(precinct) + factor(year) + cureOn +
                 yrPostCure, data=df_analysis, family='poisson')
-  # model2 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn +
-  #               yrPostCure, data=df_analysis)
-  # model2 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + cureOn +
-  #               yrPostCure, data=df_analysis)
-  
   return(model2)
 }
 cureQuadraticReg <- function(df_analysis) {
   #Quadratic dynamic Cure effects
   model3 <- glm(numShootings ~ factor(precinct) + factor(year) + cureOn +
                 yrPostCure + I(yrPostCure^2), data=df_analysis, family='poisson')
-  # model3 <- lm(numShootings ~ factor(precinct) + factor(year) + cureOn +
-  #               yrPostCure + I(yrPostCure^2), data=df_analysis)
-  # model3 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + cureOn +
-  #               yrPostCure + I(yrPostCure^2), data=df_analysis)
-  
   return(model3)
 }
 
@@ -735,14 +679,8 @@ model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
 cureDIDTables(model1, model2, model3, "preCovidPoisDIDs")
 
-#Controls and pre-2020 Cure precincts
-# df_analysis <- shootings_cure %>% filter(!curePrecinct | curePre2020)
-
 #Only include Cure precincts
 df_analysis <- shootings_cure %>% filter(curePrecinct)
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "onlyCurePoisES")
 model1 <- cureBinaryReg(df_analysis)
 model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
@@ -754,9 +692,6 @@ extraDIDTables(4,'Felony Arrests','onlyCurePoisDIDsComplaintsArrests')
 
 #Controls and 2012-2014 cure precincts
 df_analysis <- shootings_cure %>% filter(!curePrecinct | earlyCure)
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "earlyCurePoisES")
 model1 <- cureBinaryReg(df_analysis)
 model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
@@ -764,9 +699,6 @@ cureDIDTables(model1, model2, model3, "earlyCurePoisDIDs")
 
 #Controls and 2015-2016 cure precincts
 df_analysis <- shootings_cure %>% filter(!curePrecinct | midCure)
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "midCurePoisES")
 model1 <- cureBinaryReg(df_analysis)
 model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
@@ -774,26 +706,10 @@ cureDIDTables(model1, model2, model3, "midCurePoisDIDs")
 
 #Controls and 2019-21 cure precincts
 df_analysis <- shootings_cure %>% filter(!curePrecinct | lateCure)
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "lateCurePoisES")
 model1 <- cureBinaryReg(df_analysis)
 model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
 cureDIDTables(model1, model2, model3, "lateCurePoisDIDs")
-
-#Controls and pre-2019 cure precincts
-df_analysis <- shootings_cure %>% filter(!curePrecinct | earlyCure | midCure)
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "pre2019CurePoisES")
-model1 <- cureBinaryReg(df_analysis)
-model2 <- cureLinearReg(df_analysis)
-model3 <- cureQuadraticReg(df_analysis)
-cureDIDTables(model1, model2, model3, "pre2019CurePoisDIDs")
-
-#Controls and post-2014 cure precincts
-# df_analysis <- shootings_cure %>% filter(!curePrecinct | midCure | lateCure)
 
 #Non-SO controls and Cure precincts
 df_analysis <- shootings_cure %>% filter((!curePrecinct & !controlSO) | curePrecinct)
@@ -808,9 +724,6 @@ cureDIDTables(model1, model2, model3, "NonSOControlsPoisDIDs")
 #Non-SO controls and cure precincts with yearSO<yearCure
 df_analysis <- shootings_cure %>%
   filter((!curePrecinct & !controlSO)  | (curePrecinct & !is.na(yearSO) & yearSO<yearCure))
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "NonSOControls_SOBeforeCurePoisES")
 model1 <- cureBinaryReg(df_analysis)
 model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
@@ -820,23 +733,9 @@ extraDIDTables(2,'NYPD Funds','NonSOControls_SOBeforeCurePoisDIDsComplaintsFunds
 extraDIDTables(3,'NYPD Headcount','NonSOControls_SOBeforeCurePoisDIDsComplaintsHC')
 extraDIDTables(4,'Felony Arrests','NonSOControls_SOBeforeCurePoisDIDsComplaintsArrests')
 
-#Non-SO controls and cure precincts with yearSO>yearCure
-df_analysis <- shootings_cure %>%
-  filter((!curePrecinct & !controlSO)  | (curePrecinct & !is.na(yearSO) & yearSO>yearCure))
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "NonSOControls_SOAfterCurePoisES")
-model1 <- cureBinaryReg(df_analysis)
-model2 <- cureLinearReg(df_analysis)
-model3 <- cureQuadraticReg(df_analysis)
-cureDIDTables(model1, model2, model3, "NonSOControls_SOAfterCurePoisDIDs")
-
 #Non-SO controls and non-SO Cure units
 df_analysis <- shootings_cure %>%
   filter((!curePrecinct & !controlSO) | (curePrecinct & is.na(yearSO)))
-model <- cureESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-cureESFig(model, "NonSOControls_NonSOCurePoisES")
 model1 <- cureBinaryReg(df_analysis)
 model2 <- cureLinearReg(df_analysis)
 model3 <- cureQuadraticReg(df_analysis)
@@ -850,13 +749,8 @@ cureDIDTables(model1, model2, model3, "NonSOControls_NonSOCurePoisDIDs")
 
 #event study regression for Spillover effects
 spilloverESReg <- function(df_analysis) {
-  # model <- lm(numShootings ~ factor(precinct) + factor(year) + lagSO6 + lagSO5 + lagSO4 +
-  #               lagSO3 + lagSO2 + lagSO0 + leadSO1 + leadSO2 + leadSO3, data=df_analysis)
   model <- glm(numShootings ~ factor(precinct) + factor(year) + lagSO6 + lagSO5 + lagSO4 +
                lagSO3 + lagSO2 + lagSO0 + leadSO1 + leadSO2 + leadSO3, data=df_analysis, family='poisson')
-  # model <- glm.nb(numShootings ~ factor(precinct) + factor(year) + lagSO6 + lagSO5 + lagSO4 +
-  #              lagSO3 + lagSO2 + lagSO0 + leadSO1 + leadSO2 + leadSO3 , data=df_analysis)
-  
   return(model)
 }
 
@@ -928,32 +822,18 @@ spilloverBinaryReg <- function(df_analysis) {
   #Binary spillover treatment model
   model1 <- glm(numShootings ~ factor(precinct) + factor(year) + spilloverOn, 
                 data=df_analysis, family='poisson')
-  #model1 <- lm(numShootings ~ factor(precinct) + factor(year) + spilloverOn, data=df_analysis)
-  
-  # model1 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + spilloverOn, data=df_analysis)
-  
   return(model1)
 }
 spilloverLinearReg <- function(df_analysis) {
   #Linear dynamic spillover effects
   model2 <- glm(numShootings ~ factor(precinct) + factor(year) + spilloverOn + yrPostSO,
                 data=df_analysis, family='poisson')
-  # model2 <- lm(numShootings ~ factor(precinct) + factor(year) + spilloverOn +
-  #               yrPostSO, data=df_analysis)
-  # model2 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + spilloverOn + yrPostSO, 
-  #               data=df_analysis)
-  
   return(model2)
 }
 spilloverQuadraticReg <- function(df_analysis) {
   #Quadratic dynamic spillover effects
   model3 <- glm(numShootings ~ factor(precinct) + factor(year) + spilloverOn + 
                   yrPostSO + I(yrPostSO^2), data=df_analysis, family='poisson')
-  # model3 <- lm(numShootings ~ factor(precinct) + factor(year) + spilloverOn +
-  #               yrPostSO + I(yrPostSO^2), data=df_analysis)
-  # model3 <- glm.nb(numShootings ~ factor(precinct) + factor(year) + spilloverOn + 
-  #                 yrPostSO + I(yrPostSO^2), data=df_analysis)
-  
   return(model3)
 }
 
@@ -1034,9 +914,6 @@ extraSODIDTables <- function(modelNum, extraVar, tabName) {
 # Controls and cure precincts with yearSO<yearCure
 df_analysis <- shootings_cure %>%
   filter(!curePrecinct | (curePrecinct & !is.na(yearSO) & yearSO<yearCure))
-model <- spilloverESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-spilloverESFig(model, "SOBeforeCurePoisSOES")
 model1 <- spilloverBinaryReg(df_analysis)
 model2 <- spilloverLinearReg(df_analysis)
 model3 <- spilloverQuadraticReg(df_analysis)
@@ -1060,23 +937,9 @@ extraSODIDTables(2,'NYPD Funds','onlyControlsPoisSODIDsComplaintsFunds')
 extraSODIDTables(3,'NYPD Headcount','onlyControlsPoisSODIDsComplaintsHC')
 extraSODIDTables(4,'Felony Arrests','onlyControlsPoisSODIDsComplaintsArrests')
 
-#Non-SO controls and cure precincts with yearSO<yearCure
-df_analysis <- shootings_cure %>%
-  filter((!curePrecinct & !controlSO)  | (curePrecinct & !is.na(yearSO) & yearSO<yearCure))
-model <- spilloverESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-spilloverESFig(model, "NonSOControls_SOBeforeCurePoisSOES")
-model1 <- spilloverBinaryReg(df_analysis)
-model2 <- spilloverLinearReg(df_analysis)
-model3 <- spilloverQuadraticReg(df_analysis)
-spilloverDIDTables(model1, model2, model3, "NonSOControls_SOBeforeCurePoisSODIDs")
-
 #Non-SO controls and cure precincts with yearSO>yearCure
 df_analysis <- shootings_cure %>%
   filter((!curePrecinct & !controlSO)  | (curePrecinct & !is.na(yearSO) & yearSO>yearCure))
-model <- spilloverESReg(df_analysis)
-coeftest(model, vcov=vcovHC(model, type='HC1'))
-spilloverESFig(model, "NonSOControls_SOAfterCurePoisSOES")
 model1 <- spilloverBinaryReg(df_analysis)
 model2 <- spilloverLinearReg(df_analysis)
 model3 <- spilloverQuadraticReg(df_analysis)
@@ -1088,14 +951,9 @@ extraSODIDTables(4,'Felony Arrests','NonSOControls_SOAfterCurePoisSODIDsComplain
 ```
 
 ```{r additionalFigures}
-#histogram of shootings across time
-# shootings %>% ggplot(aes(x=yr_month)) + geom_histogram(bins=207, color="white", fill="blue")
-
 #Number of shootings by year
 temp <- shootings %>% group_by(year) %>% summarise(numShootings = n())
 summary(temp$numShootings)
-temp2 <- temp %>% filter(year>=2012)
-summary(temp2$numShootings)
 plt <- ggplot(data=temp, aes(x=year, y=numShootings)) +
   geom_line() +
   geom_point_interactive(aes(tooltip=numShootings), size=2) +
@@ -1122,8 +980,6 @@ ggsave(file.path(figPth,"cureDateHist.png"), plt, width=5, height=3, units="in")
 temp <- shootings_cure %>% group_by(curePrecinct, year) %>% summarise(numShootings = mean(numShootings))
 summary(shootings_cure$numShootings)
 by(temp$numShootings, temp$curePrecinct, summary)
-temp2 <- temp %>% filter(curePrecinct & year>=2012)
-summary(temp2$numShootings)
 plt <- ggplot(data=temp, aes(x=year, y=numShootings, color=curePrecinct)) +
   geom_line() +
   geom_point_interactive(aes(tooltip=round(numShootings,digits=0)), size=2) +
@@ -1206,6 +1062,7 @@ plt <- ggplot(data=temp, aes(x=year, y=numShootings, color=controlSO)) +
 saveWidget(girafe(ggobj=plt),file.path(figPth,"numShootings_byControlSO.html"))
 ggsave(file.path(figPth,"numShootings_byControlSO.png"), plt, width=5, height=4, units="in")
 
+#cost-benefit simple calculations
 temp <- shootings_cure %>% filter(year>=2012) %>% group_by(cureOn) %>% 
   summarise(numShootings = mean(numShootings))
 temp2 <- shootings_cure %>% filter(year>=2012) %>% group_by(year) %>% 
@@ -1215,44 +1072,17 @@ summary(temp2$numNotCure)
 temp3 <- shootings %>% filter(year>=2012) %>% group_by(year) %>% 
   summarise(numShootings = n())
 summary(temp3$numShootings)
-#59.4*12.6+16.6*40.2=1416
+#59.4*12.6+16.6*40.2~=1415
 #40.2/0.86=46.7
 #(46.7-40.2)*16.6=108
 #108/1415=7.6%
+#108*12=1296
 temp <- shootings_cure %>% filter(year==2023) %>% group_by(cureOn) %>% 
   summarise(numShootings = mean(numShootings))
 temp3 <- shootings %>% filter(year==2023) %>% group_by(year) %>% 
   summarise(numShootings = n())
-#32.1*28+7.3*48=1249
+#32.1*28+7.3*48~=1250
 #32.1/0.86=37.3
 #(37.3-32.1)*28=145
 #145/1250=11.6%
-
-#For Cure precincts, plot true and counterfactual (predicted) num. of shootings
-#get Cure precinct counterfactual, filter out data for cure/spillover precincts after they've been 
-#exposed to Cure (possibly via spillover)
-# temp <- shootings_cure %>% 
-#   filter(!((curePrecinct | controlSO) & (cureOn | spilloverOn)))
-# #Just estimate the precinct and year FEs. Year FEs for later years are now
-# #being solely estimated by pure control precincts. Precinct FEs are being estimated
-# #using data from years prior to any Cure exposure
-# model <- lm(numShootings ~ factor(precinct) + factor(year), 
-#                data=temp)
-# #make prediction
-# predictions <- predict(model, newdata=shootings_cure)
-# temp <- cbind(shootings_cure, predictions)
-# temp <- temp %>% filter(curePrecinct) %>% group_by(year) %>% 
-#   summarise(numShootings = mean(numShootings), predicted=mean(predictions))
-# plt <- ggplot(data=temp) +
-#   geom_line(aes(x=year, y=numShootings, color='Cure'))+
-#   geom_line(aes(x=year, y=predicted, color='Counterfactual'))+
-#   geom_point_interactive(aes(x=year, y=numShootings,
-#                              tooltip=round(numShootings,digits=0)), size=2) +
-#   geom_point_interactive(aes(x=year, y=predicted,
-#                              tooltip=round(predicted,digits=0)), size=2) +
-#   #ylim(0,70)+
-#   labs(x="Year", y="Number of Shootings",color="") +
-#   theme_nycc()
-# saveWidget(girafe(ggobj=plt),file.path(figPth,"numShootings_cureCntrFctl.html"))
-# ggsave(file.path(figPth,"numShootings_cureCntrFctl.png"), plt, width=5, height=4, units="in")
 ```
