@@ -1,0 +1,38 @@
+---
+title: "00_read_data"
+author: "Melissa Nunez"
+date: "5/23/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("code/00_load_dependencies.R")
+```
+
+```{r}
+# Population by precinct
+precinct_pop <- read.csv("data/input/nyc_2010pop_2020precincts.csv") %>% clean_names()
+
+# Program dates
+program_dates <- read_excel("data/input/CMS List 1.6.22 for NYCC .xlsx") %>% clean_names()
+
+# Separate and filter program dates
+programs_21 <- program_dates %>% separate(date_text, c("year","month")) %>% filter(year<=21) %>% mutate(waves=21-as.numeric(year))
+
+# Precinct shape file
+unzip_sf <- function(url) {
+  tmp_zip <- tempfile(fileext = ".zip")
+  download.file(url, tmp_zip, mode = "wb")
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+  unzip(tmp_zip, exdir = tmp_dir)
+  list.files(tmp_dir, pattern = "\\.shp$", full.names = TRUE)[1]
+}
+
+precinct.shp <- st_read(unzip_sf("https://data.cityofnewyork.us/api/geospatial/y76i-bdw7?method=export&format=Shapefile")) %>%  st_transform('+proj=longlat +datum=WGS84')
+
+boro <- read_sf("https://data.cityofnewyork.us/api/geospatial/gthc-hcne?method=export&format=GeoJSON") %>% 
+  st_transform("+proj=longlat +datum=WGS84") %>% 
+  st_simplify(dTolerance = .00001)
+```
